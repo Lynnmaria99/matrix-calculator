@@ -18,3 +18,7 @@ venv/
 
 # Codex 本地配置
 .codex/
+
+# Jupyter
+.ipynb_checkpoints/
+**/.ipynb_checkpoints/
