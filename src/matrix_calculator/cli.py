@@ -14,7 +14,7 @@ from .io_utils import (
     read_vector,
     read_vector_group,
 )
-from .linalg_topics import classify_quadratic, rank_and_nullspace, solve_linear
+from .linalg_topics import analyze_quadratic, rank_and_nullspace, solve_linear
 from .operations import (
     MatrixOperationError,
     add_matrices,
@@ -240,28 +240,29 @@ def op_quadratic():
     print("【二次型 f = xᵀAx：标准形与正定性】")
     n = read_int("请输入方阵阶数 n: ")
     a = mkMat(n, n)
-    if not np.allclose(a, a.T, atol=1e-8):
+    result = analyze_quadratic(a)
+    if not result["symmetric"]:
         print("提示: 输入矩阵不对称；二次型只取决于对称部分，已自动对称化 A ← (A+Aᵀ)/2")
-    s = (a + a.T) / 2.0
 
     print("二次型的矩阵 A 为:")
-    print_matrix(s)
-    w, q = np.linalg.eigh(s)
+    print_matrix(result["matrix"])
     print("特征值 (升序) 为:")
-    print_matrix(w)
+    print_matrix(result["eigenvalues"])
     print("正交变换矩阵 Q (x = Qy，每一列是对应特征向量):")
-    print_matrix(q)
+    print_matrix(result["Q"])
 
-    pairs = [(lam, f"y{i + 1}²") for i, lam in enumerate(w)]
-    print(f"经正交变换 x = Qy，二次型化为标准形:\n  f = {signed_polynomial(pairs)}")
+    standard_form = signed_polynomial(result["standard_terms"])
+    print(f"经正交变换 x = Qy，二次型化为标准形:\n  f = {standard_form}")
+    print(
+        f"正惯性指数 p = {result['pos']}，负惯性指数 q = {result['neg']}，"
+        f"该二次型{result['kind']}"
+    )
 
-    kind, pos, neg, _zero = classify_quadratic(w)
-    print(f"正惯性指数 p = {pos}，负惯性指数 q = {neg}，该二次型{kind}")
-
-    minors = [float(np.linalg.det(s[:k, :k])) for k in range(1, n + 1)]
-    shown = ", ".join(f"Δ{k} = {v:.4g}" for k, v in enumerate(minors, start=1))
+    shown = ", ".join(
+        f"Δ{k} = {v:.4g}" for k, v in enumerate(result["minors"], start=1)
+    )
     print(f"顺序主子式: {shown}")
-    if all(v > EPS for v in minors):
+    if all(v > EPS for v in result["minors"]):
         print("→ 各阶顺序主子式全大于 0，由 Sylvester 判据，A【正定】")
 
 

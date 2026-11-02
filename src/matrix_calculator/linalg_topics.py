@@ -5,6 +5,7 @@ from __future__ import annotations
 import numpy as np
 
 from .constants import EPS
+from .operations import MatrixOperationError
 
 
 def rank_and_nullspace(a: np.ndarray):
@@ -78,3 +79,36 @@ def classify_quadratic(eigenvalues: np.ndarray, tol: float = EPS):
     else:
         kind = "判定需人工复核"
     return kind, pos, neg, zero
+
+def analyze_quadratic(matrix, symmetric_tol: float = 1e-8, tol: float = EPS):
+    """分析二次型 ``f = xᵀAx``。
+
+    返回特征值、正交矩阵、标准形、正定性分类和顺序主子式。
+    非对称输入会按二次型的对称部分 ``S=(A+Aᵀ)/2`` 分析。
+    """
+    a = np.asarray(matrix, dtype=np.float64)
+    if a.ndim != 2 or a.shape[0] != a.shape[1]:
+        raise MatrixOperationError("二次型分析需要方阵")
+
+    symmetric = bool(np.allclose(a, a.T, atol=symmetric_tol))
+    s = (a + a.T) / 2.0
+    eigenvalues, orthogonal_q = np.linalg.eigh(s)
+    kind, pos, neg, zero = classify_quadratic(eigenvalues, tol=tol)
+    minors = np.array(
+        [float(np.linalg.det(s[:k, :k])) for k in range(1, s.shape[0] + 1)]
+    )
+    standard_terms = [(float(lam), f"y{i + 1}²") for i, lam in enumerate(eigenvalues)]
+
+    return {
+        "input": a,
+        "symmetric": symmetric,
+        "matrix": s,
+        "eigenvalues": eigenvalues,
+        "Q": orthogonal_q,
+        "kind": kind,
+        "pos": pos,
+        "neg": neg,
+        "zero": zero,
+        "minors": minors,
+        "standard_terms": standard_terms,
+    }
