@@ -116,3 +116,67 @@ def test_streamlit_matrix_reports_invalid_cell():
     assert not app.exception
     assert app.error
     assert "不合法" in app.error[0].value
+
+def test_streamlit_binary_result_shows_determinant_and_inverse():
+    app = _load_page("双矩阵运算")
+
+    assert not app.exception
+    assert any(metric.label == "形状 C" and metric.value == "2 × 2" for metric in app.metric)
+    assert any(metric.label == "行列式 det(C)" and metric.value == "4" for metric in app.metric)
+    assert any(metric.label == "C 是否可逆" and metric.value == "可逆" for metric in app.metric)
+    assert any("逆矩阵 C⁻¹" in markdown.value for markdown in app.markdown)
+    assert any("0.5" in text.value for text in app.text)
+
+
+def test_streamlit_binary_singular_result_reports_missing_inverse():
+    app = _start_page("双矩阵运算")
+    app.session_state["matrix:binary-b:raw"] = [
+        ["0", "1"],
+        ["1", "0"],
+    ]
+    app.run()
+    _click(app, "计算")
+
+    assert not app.exception
+    assert any(metric.label == "行列式 det(C)" and metric.value == "0" for metric in app.metric)
+    assert any(metric.label == "C 是否可逆" and metric.value == "不可逆" for metric in app.metric)
+    assert app.info
+    assert "不存在可用的逆矩阵" in app.info[0].value
+    assert not any("逆矩阵 C⁻¹" in markdown.value for markdown in app.markdown)
+
+
+def test_streamlit_binary_result_followup_svd_persists_after_rerun():
+    app = _load_page("双矩阵运算")
+
+    assert len(app.segmented_control) == 2
+    app.segmented_control[1].set_value("svd").run()
+
+    assert not app.exception
+    assert any(markdown.value.strip() == "**U**" for markdown in app.markdown)
+    assert any("奇异值 S" in markdown.value for markdown in app.markdown)
+    assert any("Vᵀ" in markdown.value for markdown in app.markdown)
+
+
+def test_streamlit_non_square_binary_result_offers_svd_and_transpose():
+    app = _start_page("双矩阵运算")
+    app.session_state["matrix:binary-a:dims"] = [2, 3]
+    app.session_state["matrix:binary-a:raw"] = [
+        ["1", "0", "0"],
+        ["0", "1", "0"],
+    ]
+    app.session_state["matrix:binary-b:dims"] = [2, 3]
+    app.session_state["matrix:binary-b:raw"] = [
+        ["0", "1", "0"],
+        ["1", "0", "0"],
+    ]
+    app.run()
+    _click(app, "计算")
+
+    assert not app.exception
+    assert any(metric.label == "形状 C" and metric.value == "2 × 3" for metric in app.metric)
+    assert not any(metric.label.startswith("行列式") for metric in app.metric)
+    assert app.segmented_control[1].options == ["SVD", "Cᵀ"]
+
+    app.segmented_control[1].set_value("transpose").run()
+    assert not app.exception
+    assert any("转置 Cᵀ" in markdown.value for markdown in app.markdown)

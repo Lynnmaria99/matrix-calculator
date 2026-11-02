@@ -195,14 +195,16 @@ APP_THEME_CSS = """
     -webkit-backdrop-filter: blur(20px) saturate(160%);
   }
 
+  [data-testid="stText"],
   pre {
-    background: rgba(255, 255, 255, 0.62);
-    border: 1px solid rgba(255, 255, 255, 0.76);
-    border-radius: 18px;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+    background: rgba(255, 255, 255, 0.48);
+    border: 1px solid rgba(255, 255, 255, 0.64);
+    border-radius: 16px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.68);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     line-height: 1.65;
     overflow-x: auto;
-    padding: 1rem 1.1rem;
+    padding: 0.85rem 1rem;
     backdrop-filter: blur(18px) saturate(160%);
     -webkit-backdrop-filter: blur(18px) saturate(160%);
   }
@@ -842,6 +844,8 @@ def matrix_input(
         st.error("矩阵中有不合法的输入：" + "；".join(errors[:3]))
         st.stop()
     return matrix
+
+
 def show_text_matrix(label: str, value) -> None:
     with st.container(border=True):
         st.markdown(f"**{label}**")
@@ -851,6 +855,37 @@ def show_text_matrix(label: str, value) -> None:
 def show_error(exc: Exception) -> None:
     st.error(f"输入或计算有误：{exc}")
 
+
+def _matrix_signature(matrix: np.ndarray) -> tuple[tuple[int, int], tuple[float, ...]]:
+    """生成可比较的矩阵输入签名，用于判断上次结果是否已经过期。"""
+    array = np.asarray(matrix, dtype=float)
+    return array.shape, tuple(array.ravel().tolist())
+
+
+def render_matrix_analysis(
+    matrix: np.ndarray,
+    operation_code: str,
+    symbol: str = "A",
+) -> None:
+    """渲染单矩阵分析结果，供单矩阵页和双矩阵结果复用。"""
+    if operation_code == "determinant":
+        with st.container(border=True):
+            st.metric(f"行列式 det({symbol})", f"{determinant(matrix):.6g}")
+    elif operation_code == "inverse":
+        show_text_matrix(f"逆矩阵 {symbol}⁻¹", invert_matrix(matrix))
+    elif operation_code == "transpose":
+        show_text_matrix(f"转置 {symbol}ᵀ", transpose(matrix))
+    elif operation_code == "eigendecomposition":
+        eigenvalues, eigenvectors = eigendecompose(matrix)
+        show_text_matrix("特征值", eigenvalues)
+        show_text_matrix("特征向量（每列对应一个特征值）", eigenvectors)
+        if np.iscomplexobj(eigenvalues) and np.any(np.abs(eigenvalues.imag) > 1e-9):
+            st.info("该矩阵存在复数特征值或特征向量。")
+    elif operation_code == "svd":
+        u, singular_values, vt = singular_value_decompose(matrix)
+        show_text_matrix("U", u)
+        show_text_matrix("奇异值 S", singular_values)
+        show_text_matrix("Vᵀ", vt)
 
 
 # ==================== 页面：双矩阵运算 ====================
@@ -865,6 +900,100 @@ BINARY_OPERATIONS = [
 ]
 BINARY_OPTION_LABELS = {code: label for code, label, _ in BINARY_OPERATIONS}
 BINARY_OPERATION_FUNCTIONS = {code: func for code, _, func in BINARY_OPERATIONS}
+
+
+BINARY_RESULT_KEY = "binary:last_result"
+BINARY_RESULT_ANALYSIS_KEY = "binary:result_analysis"
+BINARY_RESULT_ANALYSIS_LABELS = {
+    "eigendecomposition": "特征分解",
+    "svd": "SVD",
+    "transpose": "Cᵀ",
+}
+
+
+def _binary_input_signature(
+    operation_code: str,
+    mat_a: np.ndarray,
+    mat_b: np.ndarray,
+) -> tuple[str, tuple, tuple]:
+    return (
+        operation_code,
+        _matrix_signature(mat_a),
+        _matrix_signature(mat_b),
+    )
+
+
+def _render_binary_result(
+    result: np.ndarray,
+    operation_code: str,
+    *,
+    stale: bool,
+) -> None:
+    """展示 C=A*B，并把常用单矩阵分析直接接到结果下面。"""
+    operation_label = BINARY_OPTION_LABELS[operation_code]
+    if stale:
+        st.warning("A、B 或运算方式已改变，下面是上一次结果；点击“计算”后可继续分析。")
+
+    show_text_matrix(f"运算结果 C = {operation_label}", result)
+
+    rows, cols = result.shape
+    is_square = rows == cols
+    determinant_value = None
+    inverse_matrix = None
+
+    if is_square:
+        determinant_value = determinant(result)
+        try:
+            inverse_matrix = invert_matrix(result)
+        except (MatrixOperationError, np.linalg.LinAlgError):
+            inverse_matrix = None
+
+        col_shape, col_determinant, col_invertible = st.columns(3)
+        with col_shape:
+            with st.container(border=True):
+                st.metric("形状 C", f"{rows} × {cols}")
+        with col_determinant:
+            with st.container(border=True):
+                st.metric("行列式 det(C)", f"{determinant_value:.6g}")
+        with col_invertible:
+            with st.container(border=True):
+                st.metric("C 是否可逆", "可逆" if inverse_matrix is not None else "不可逆")
+
+        if inverse_matrix is not None:
+            show_text_matrix("逆矩阵 C⁻¹", inverse_matrix)
+        else:
+            st.info("det(C)=0（或数值上接近奇异），所以 C 不存在可用的逆矩阵。")
+    else:
+        col_shape, _, _ = st.columns(3)
+        with col_shape:
+            with st.container(border=True):
+                st.metric("形状 C", f"{rows} × {cols}")
+        st.caption("非方阵没有行列式和逆矩阵；仍可继续查看 SVD 或转置。")
+
+    analysis_options = (
+        ["eigendecomposition", "svd", "transpose"]
+        if is_square
+        else ["svd", "transpose"]
+    )
+    if st.session_state.get(BINARY_RESULT_ANALYSIS_KEY) not in analysis_options:
+        st.session_state[BINARY_RESULT_ANALYSIS_KEY] = None
+
+    with st.container(border=True):
+        st.caption("继续分析结果 C，选择一项即可；det(C) 和可逆时的 C⁻¹ 已自动显示。")
+        result_operation = st.segmented_control(
+            "继续分析结果 C",
+            options=analysis_options,
+            format_func=BINARY_RESULT_ANALYSIS_LABELS.get,
+            default=None,
+            required=False,
+            label_visibility="collapsed",
+            width="stretch",
+            key=BINARY_RESULT_ANALYSIS_KEY,
+            disabled=stale,
+        )
+
+    if result_operation is not None and not stale:
+        render_matrix_analysis(result, result_operation, symbol="C")
 
 
 def page_binary() -> None:
@@ -891,12 +1020,26 @@ def page_binary() -> None:
     with st.container(horizontal=True, horizontal_alignment="right"):
         run_binary = st.button("计算", type="primary", key="run_binary")
 
+    current_signature = _binary_input_signature(operation_code, mat_a, mat_b)
     if run_binary:
         try:
             result = BINARY_OPERATION_FUNCTIONS[operation_code](mat_a, mat_b)
-            show_text_matrix("运算结果", result)
+            st.session_state[BINARY_RESULT_KEY] = {
+                "operation": operation_code,
+                "matrix": result,
+                "signature": current_signature,
+            }
         except (MatrixOperationError, np.linalg.LinAlgError) as exc:
+            st.session_state.pop(BINARY_RESULT_KEY, None)
             show_error(exc)
+
+    cached_result = st.session_state.get(BINARY_RESULT_KEY)
+    if cached_result is not None:
+        _render_binary_result(
+            cached_result["matrix"],
+            cached_result["operation"],
+            stale=cached_result["signature"] != current_signature,
+        )
 
 
 # ==================== 页面：单矩阵运算 ====================
@@ -934,24 +1077,7 @@ def page_unary() -> None:
 
     if run_unary:
         try:
-            if operation_code == "determinant":
-                with st.container(border=True):
-                    st.metric("行列式 det(A)", f"{determinant(mat):.6g}")
-            elif operation_code == "inverse":
-                show_text_matrix("逆矩阵 A⁻¹", invert_matrix(mat))
-            elif operation_code == "transpose":
-                show_text_matrix("转置 Aᵀ", transpose(mat))
-            elif operation_code == "eigendecomposition":
-                eigenvalues, eigenvectors = eigendecompose(mat)
-                show_text_matrix("特征值", eigenvalues)
-                show_text_matrix("特征向量（每列对应一个特征值）", eigenvectors)
-                if np.iscomplexobj(eigenvalues) and np.any(np.abs(eigenvalues.imag) > 1e-9):
-                    st.info("该矩阵存在复数特征值或特征向量。")
-            elif operation_code == "svd":
-                u, singular_values, vt = singular_value_decompose(mat)
-                show_text_matrix("U", u)
-                show_text_matrix("奇异值 S", singular_values)
-                show_text_matrix("Vᵀ", vt)
+            render_matrix_analysis(mat, operation_code, symbol="A")
         except (MatrixOperationError, np.linalg.LinAlgError) as exc:
             show_error(exc)
 
