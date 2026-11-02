@@ -664,33 +664,38 @@ def show_error(exc: Exception) -> None:
 # ==================== 页面：双矩阵运算 ====================
 
 
+BINARY_OPERATIONS = [
+    ("add", "A + B", add_matrices),
+    ("subtract", "A − B", subtract_matrices),
+    ("multiply", "A × B", matrix_multiply),
+    ("hadamard_multiply", "A ⊙ B", hadamard_multiply),
+    ("hadamard_divide", "A ⊘ B", hadamard_divide),
+]
+BINARY_OPTION_LABELS = {code: label for code, label, _ in BINARY_OPERATIONS}
+BINARY_OPERATION_FUNCTIONS = {code: func for code, _, func in BINARY_OPERATIONS}
+
+
 def page_binary() -> None:
     st.header("双矩阵运算")
-    operation_name = st.selectbox(
-        "选择运算",
-        [
-            "矩阵加法（A + B）",
-            "矩阵减法（A - B）",
-            "矩阵乘法（A × B）",
-            "对应元素相乘（Hadamard）",
-            "对应元素相除（A / B）",
-        ],
+    operation_code = st.segmented_control(
+        "选择双矩阵运算",
+        options=[code for code, _, _ in BINARY_OPERATIONS],
+        format_func=BINARY_OPTION_LABELS.get,
+        default="add",
+        required=True,
+        label_visibility="collapsed",
+        width="stretch",
+        key="binary_operation",
     )
+    st.caption("A ⊙ B 和 A ⊘ B 表示对应元素相乘 / 相除；A × B 是矩阵乘法。")
 
     mat_a = matrix_input("矩阵 A", "binary-a", symbol="A")
     st.caption("对下面的矩阵 B 应用上面选择的运算。")
     mat_b = matrix_input("矩阵 B", "binary-b", symbol="B")
 
     if st.button("计算", type="primary", key="run_binary"):
-        operations = {
-            "矩阵加法（A + B）": add_matrices,
-            "矩阵减法（A - B）": subtract_matrices,
-            "矩阵乘法（A × B）": matrix_multiply,
-            "对应元素相乘（Hadamard）": hadamard_multiply,
-            "对应元素相除（A / B）": hadamard_divide,
-        }
         try:
-            result = operations[operation_name](mat_a, mat_b)
+            result = BINARY_OPERATION_FUNCTIONS[operation_code](mat_a, mat_b)
             show_text_matrix("运算结果", result)
         except (MatrixOperationError, np.linalg.LinAlgError) as exc:
             show_error(exc)
@@ -699,29 +704,44 @@ def page_binary() -> None:
 # ==================== 页面：单矩阵运算 ====================
 
 
+UNARY_OPERATIONS = {
+    "determinant": "det(A)",
+    "inverse": "A⁻¹",
+    "eigendecomposition": "特征分解",
+    "svd": "SVD",
+    "transpose": "Aᵀ",
+}
+
+
 def page_unary() -> None:
     st.header("单矩阵运算")
-    operation_name = st.selectbox(
-        "选择运算",
-        ["行列式", "逆矩阵", "特征分解", "奇异值分解 SVD", "转置"],
+    operation_code = st.segmented_control(
+        "选择单矩阵运算",
+        options=list(UNARY_OPERATIONS),
+        format_func=UNARY_OPERATIONS.get,
+        default="determinant",
+        required=True,
+        label_visibility="collapsed",
+        width="stretch",
+        key="unary_operation",
     )
     mat = matrix_input("矩阵 A", "unary-a", symbol="A")
 
     if st.button("计算", type="primary", key="run_unary"):
         try:
-            if operation_name == "行列式":
+            if operation_code == "determinant":
                 st.metric("行列式 det(A)", f"{determinant(mat):.6g}")
-            elif operation_name == "逆矩阵":
+            elif operation_code == "inverse":
                 show_text_matrix("逆矩阵 A⁻¹", invert_matrix(mat))
-            elif operation_name == "转置":
+            elif operation_code == "transpose":
                 show_text_matrix("转置 Aᵀ", transpose(mat))
-            elif operation_name == "特征分解":
+            elif operation_code == "eigendecomposition":
                 eigenvalues, eigenvectors = eigendecompose(mat)
                 show_text_matrix("特征值", eigenvalues)
                 show_text_matrix("特征向量（每列对应一个特征值）", eigenvectors)
                 if np.iscomplexobj(eigenvalues) and np.any(np.abs(eigenvalues.imag) > 1e-9):
                     st.info("该矩阵存在复数特征值或特征向量。")
-            elif operation_name == "奇异值分解 SVD":
+            elif operation_code == "svd":
                 u, singular_values, vt = singular_value_decompose(mat)
                 show_text_matrix("U", u)
                 show_text_matrix("奇异值 S", singular_values)

@@ -52,6 +52,34 @@ def test_streamlit_pages_default_action(page_name):
     assert not app.error
 
 
+
+def test_streamlit_binary_operations_are_visible_segments():
+    app = _start_page("双矩阵运算")
+
+    assert not app.selectbox
+    assert len(app.segmented_control) == 1
+    assert app.segmented_control[0].value == "add"
+
+    app.segmented_control[0].set_value("multiply").run()
+    _click(app, "计算")
+
+    assert not app.exception
+    assert not app.error
+
+
+def test_streamlit_unary_operations_are_visible_segments():
+    app = _start_page("单矩阵运算")
+
+    assert not app.selectbox
+    assert len(app.segmented_control) == 1
+    assert app.segmented_control[0].value == "determinant"
+
+    app.segmented_control[0].set_value("transpose").run()
+    _click(app, "计算")
+
+    assert not app.exception
+    assert not app.error
+
 def test_streamlit_quadratic_identity_is_positive_definite():
     app = _load_page("二次型分析")
 
