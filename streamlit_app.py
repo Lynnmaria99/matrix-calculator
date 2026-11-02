@@ -46,6 +46,187 @@ st.set_page_config(page_title="矩阵计算器", page_icon="🧮", layout="wide"
 
 MAX_DIMENSION = 12
 
+
+APP_THEME_CSS = """
+<style>
+  :root {
+    --mx-blue: #0071e3;
+    --mx-text: #1d1d1f;
+    --mx-muted: #6e6e73;
+    --mx-glass: rgba(255, 255, 255, 0.62);
+    --mx-glass-strong: rgba(255, 255, 255, 0.78);
+    --mx-glass-border: rgba(255, 255, 255, 0.76);
+    --mx-shadow: 0 22px 60px rgba(15, 23, 42, 0.10);
+    --mx-shadow-soft: 0 10px 28px rgba(15, 23, 42, 0.08);
+    --mx-font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+      "Segoe UI Variable Display", "Segoe UI", "PingFang SC", "Microsoft YaHei",
+      sans-serif;
+  }
+
+  .stApp,
+  .stAppViewContainer {
+    background:
+      radial-gradient(1100px 520px at 8% -8%, rgba(0, 113, 227, 0.20), transparent 58%),
+      radial-gradient(900px 520px at 98% -4%, rgba(175, 82, 222, 0.15), transparent 55%),
+      radial-gradient(820px 620px at 78% 100%, rgba(48, 209, 188, 0.15), transparent 60%),
+      linear-gradient(180deg, #f8faff 0%, #eef3fb 100%) !important;
+    color: var(--mx-text);
+    font-family: var(--mx-font);
+  }
+
+  .stAppViewContainer {
+    background-attachment: fixed;
+  }
+
+  [data-testid="stHeader"] {
+    background: transparent;
+  }
+
+  [data-testid="stMainBlockContainer"] {
+    max-width: 1040px;
+    padding: 2.35rem 2rem 4.5rem;
+  }
+
+  h1, h2, h3 {
+    letter-spacing: -0.025em;
+  }
+
+  h1 {
+    font-size: 2.35rem;
+    font-weight: 700;
+  }
+
+  h2 {
+    font-size: 1.55rem;
+    font-weight: 650;
+  }
+
+  [data-testid="stSidebar"] {
+    background: rgba(255, 255, 255, 0.56);
+    border-right: 1px solid rgba(255, 255, 255, 0.72);
+    box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.45);
+    backdrop-filter: blur(32px) saturate(180%);
+    -webkit-backdrop-filter: blur(32px) saturate(180%);
+  }
+
+  [data-testid="stSidebarContent"] {
+    background: transparent;
+  }
+
+  [data-testid="stLayoutWrapper"] > [data-testid="stVerticalBlock"] {
+    background: var(--mx-glass) !important;
+    border: 1px solid var(--mx-glass-border) !important;
+    border-radius: 24px !important;
+    box-shadow:
+      var(--mx-shadow),
+      inset 0 1px 0 rgba(255, 255, 255, 0.78) !important;
+    padding: 1.15rem 1.25rem;
+    backdrop-filter: blur(30px) saturate(180%);
+    -webkit-backdrop-filter: blur(30px) saturate(180%);
+  }
+
+  [class*="st-key-matrix-grid-"] {
+    align-self: center;
+    margin-inline: auto;
+  }
+
+  [data-testid="stButtonGroup"] {
+    background: rgba(255, 255, 255, 0.54);
+    border: 1px solid rgba(255, 255, 255, 0.78);
+    border-radius: 999px;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.8),
+      0 8px 24px rgba(15, 23, 42, 0.06);
+    gap: 2px;
+    padding: 4px;
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+  }
+
+  [data-testid="stButtonGroup"] button {
+    background: transparent !important;
+    border: 0 !important;
+    border-radius: 999px !important;
+    color: var(--mx-text) !important;
+    font-weight: 550;
+    min-height: 34px;
+  }
+
+  [data-testid="stButtonGroup"] button:hover {
+    background: rgba(255, 255, 255, 0.66) !important;
+  }
+
+  [data-testid="stButtonGroup"] button[aria-checked="true"],
+  [data-testid="stButtonGroup"] button[aria-pressed="true"] {
+    background: rgba(255, 255, 255, 0.94) !important;
+    box-shadow:
+      0 7px 18px rgba(0, 113, 227, 0.16),
+      0 1px 2px rgba(15, 23, 42, 0.08);
+    color: var(--mx-blue) !important;
+  }
+
+  [data-testid="stButtonGroup"] button[aria-checked="true"] *,
+  [data-testid="stButtonGroup"] button[aria-pressed="true"] * {
+    color: var(--mx-blue) !important;
+  }
+
+  .stButton button[kind="primary"] {
+    background: linear-gradient(180deg, #2b9aff 0%, #0071e3 100%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.28) !important;
+    border-radius: 999px !important;
+    box-shadow: 0 12px 26px rgba(0, 113, 227, 0.22);
+    font-weight: 650;
+    padding: 0.58rem 1.35rem !important;
+    transition: transform 160ms ease, box-shadow 160ms ease;
+  }
+
+  .stButton button[kind="primary"]:hover {
+    box-shadow: 0 15px 32px rgba(0, 113, 227, 0.28);
+    transform: translateY(-1px);
+  }
+
+  .stButton button[kind="primary"]:active {
+    transform: translateY(0);
+  }
+
+  [data-testid="stAlert"] {
+    border-radius: 18px;
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+  }
+
+  pre {
+    background: rgba(255, 255, 255, 0.62);
+    border: 1px solid rgba(255, 255, 255, 0.76);
+    border-radius: 18px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+    line-height: 1.65;
+    overflow-x: auto;
+    padding: 1rem 1.1rem;
+    backdrop-filter: blur(18px) saturate(160%);
+    -webkit-backdrop-filter: blur(18px) saturate(160%);
+  }
+
+  [data-testid="stCaptionContainer"],
+  [data-testid="stCaptionContainer"] * {
+    color: var(--mx-muted);
+  }
+
+  @media (max-width: 640px) {
+    [data-testid="stMainBlockContainer"] {
+      padding-left: 1rem;
+      padding-right: 1rem;
+    }
+  }
+</style>
+"""
+
+
+def inject_theme() -> None:
+    """注入应用级的 glass 风格样式。"""
+    st.markdown(APP_THEME_CSS, unsafe_allow_html=True)
+
+
 MATRIX_GRID_HTML = """
 <div class="matrix-widget" data-testid="matrix-widget">
   <div class="matrix-head">
@@ -78,8 +259,8 @@ MATRIX_GRID_CSS = """
 }
 
 .matrix-widget {
-  color: var(--st-text-color);
-  font-family: var(--st-font-family, system-ui, sans-serif);
+  color: var(--st-text-color, #1d1d1f);
+  font-family: var(--st-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
 }
 .matrix-head {
   align-items: center;
@@ -106,15 +287,18 @@ MATRIX_GRID_CSS = """
 }
 .matrix-controls button {
   appearance: none;
-  background: var(--st-secondary-background-color, rgba(128, 128, 128, 0.12));
-  border: 1px solid var(--st-border-color, rgba(128, 128, 128, 0.45));
-  border-radius: 0.45rem;
-  color: var(--st-text-color);
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  border-radius: 999px;
+  box-shadow: 0 7px 18px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.78);
+  color: var(--st-text-color, #1d1d1f);
   cursor: pointer;
   font: inherit;
   font-size: 0.82rem;
   line-height: 1.2;
-  padding: 0.22rem 0.48rem;
+  padding: 0.28rem 0.62rem;
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
 }
 .matrix-controls button:hover:not(:disabled) {
   border-color: var(--st-primary-color);
@@ -131,7 +315,7 @@ MATRIX_GRID_CSS = """
   position: relative;
 }
 .bracket {
-  border: 2.5px solid var(--st-border-color, rgba(128, 128, 128, 0.72));
+  border: 2.5px solid rgba(80, 93, 124, 0.42);
   bottom: 0.2rem;
   pointer-events: none;
   position: absolute;
@@ -150,24 +334,31 @@ MATRIX_GRID_CSS = """
 }
 .matrix-grid {
   display: grid;
-  gap: 0.28rem;
+  gap: 0.38rem;
 }
 .matrix-cell {
-  background: var(--st-secondary-background-color, rgba(128, 128, 128, 0.08));
-  border: 1px solid var(--st-border-color, rgba(128, 128, 128, 0.42));
-  border-radius: 0.35rem;
-  color: var(--st-text-color);
+  background: rgba(255, 255, 255, 0.70);
+  border: 1px solid rgba(255, 255, 255, 0.88);
+  border-radius: 0.9rem;
+  box-shadow:
+    0 8px 20px rgba(15, 23, 42, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.86);
+  color: var(--st-text-color, #1d1d1f);
   font: inherit;
   font-variant-numeric: tabular-nums;
-  height: 2.18rem;
-  min-width: 3.55rem;
+  height: 2.28rem;
+  min-width: 3.65rem;
   padding: 0.1rem 0.25rem;
   text-align: center;
-  width: 3.55rem;
+  width: 3.65rem;
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
 }
 .matrix-cell:focus {
-  border-color: var(--st-primary-color);
-  box-shadow: 0 0 0 1px var(--st-primary-color);
+  border-color: rgba(0, 113, 227, 0.55);
+  box-shadow:
+    0 0 0 4px rgba(0, 113, 227, 0.16),
+    0 10px 22px rgba(0, 113, 227, 0.10);
   outline: none;
 }
 .matrix-cell.invalid {
@@ -652,8 +843,9 @@ def matrix_input(
         st.stop()
     return matrix
 def show_text_matrix(label: str, value) -> None:
-    st.markdown(f"**{label}**")
-    st.text(format_matrix(value))
+    with st.container(border=True):
+        st.markdown(f"**{label}**")
+        st.text(format_matrix(value))
 
 
 def show_error(exc: Exception) -> None:
@@ -677,23 +869,29 @@ BINARY_OPERATION_FUNCTIONS = {code: func for code, _, func in BINARY_OPERATIONS}
 
 def page_binary() -> None:
     st.header("双矩阵运算")
-    operation_code = st.segmented_control(
-        "选择双矩阵运算",
-        options=[code for code, _, _ in BINARY_OPERATIONS],
-        format_func=BINARY_OPTION_LABELS.get,
-        default="add",
-        required=True,
-        label_visibility="collapsed",
-        width="stretch",
-        key="binary_operation",
-    )
-    st.caption("A ⊙ B 和 A ⊘ B 表示对应元素相乘 / 相除；A × B 是矩阵乘法。")
 
-    mat_a = matrix_input("矩阵 A", "binary-a", symbol="A")
-    st.caption("对下面的矩阵 B 应用上面选择的运算。")
-    mat_b = matrix_input("矩阵 B", "binary-b", symbol="B")
+    with st.container(border=True):
+        operation_code = st.segmented_control(
+            "选择双矩阵运算",
+            options=[code for code, _, _ in BINARY_OPERATIONS],
+            format_func=BINARY_OPTION_LABELS.get,
+            default="add",
+            required=True,
+            label_visibility="collapsed",
+            width="stretch",
+            key="binary_operation",
+        )
+        st.caption("A ⊙ B 和 A ⊘ B 表示对应元素相乘 / 相除；A × B 是矩阵乘法。")
 
-    if st.button("计算", type="primary", key="run_binary"):
+    with st.container(border=True):
+        mat_a = matrix_input("矩阵 A", "binary-a", symbol="A")
+        st.caption("对下面的矩阵 B 应用上面选择的运算。")
+        mat_b = matrix_input("矩阵 B", "binary-b", symbol="B")
+
+    with st.container(horizontal=True, horizontal_alignment="right"):
+        run_binary = st.button("计算", type="primary", key="run_binary")
+
+    if run_binary:
         try:
             result = BINARY_OPERATION_FUNCTIONS[operation_code](mat_a, mat_b)
             show_text_matrix("运算结果", result)
@@ -715,22 +913,30 @@ UNARY_OPERATIONS = {
 
 def page_unary() -> None:
     st.header("单矩阵运算")
-    operation_code = st.segmented_control(
-        "选择单矩阵运算",
-        options=list(UNARY_OPERATIONS),
-        format_func=UNARY_OPERATIONS.get,
-        default="determinant",
-        required=True,
-        label_visibility="collapsed",
-        width="stretch",
-        key="unary_operation",
-    )
-    mat = matrix_input("矩阵 A", "unary-a", symbol="A")
 
-    if st.button("计算", type="primary", key="run_unary"):
+    with st.container(border=True):
+        operation_code = st.segmented_control(
+            "选择单矩阵运算",
+            options=list(UNARY_OPERATIONS),
+            format_func=UNARY_OPERATIONS.get,
+            default="determinant",
+            required=True,
+            label_visibility="collapsed",
+            width="stretch",
+            key="unary_operation",
+        )
+
+    with st.container(border=True):
+        mat = matrix_input("矩阵 A", "unary-a", symbol="A")
+
+    with st.container(horizontal=True, horizontal_alignment="right"):
+        run_unary = st.button("计算", type="primary", key="run_unary")
+
+    if run_unary:
         try:
             if operation_code == "determinant":
-                st.metric("行列式 det(A)", f"{determinant(mat):.6g}")
+                with st.container(border=True):
+                    st.metric("行列式 det(A)", f"{determinant(mat):.6g}")
             elif operation_code == "inverse":
                 show_text_matrix("逆矩阵 A⁻¹", invert_matrix(mat))
             elif operation_code == "transpose":
@@ -755,16 +961,21 @@ def page_unary() -> None:
 
 def page_solve() -> None:
     st.header("解线性方程组 Ax = b")
-    st.caption("输入增广矩阵 [A | b]：最后一列自动作为常数项 b，可通过 +列 增加未知数。")
-    augmented = matrix_input(
-        "增广矩阵 [A | b]",
-        "solve-ab",
-        default=np.zeros((2, 3)),
-        min_cols=2,
-        symbol="[A | b]",
-    )
 
-    if st.button("求解", type="primary", key="run_solve"):
+    with st.container(border=True):
+        st.caption("输入增广矩阵 [A | b]：最后一列自动作为常数项 b，可通过 +列 增加未知数。")
+        augmented = matrix_input(
+            "增广矩阵 [A | b]",
+            "solve-ab",
+            default=np.zeros((2, 3)),
+            min_cols=2,
+            symbol="[A | b]",
+        )
+
+    with st.container(horizontal=True, horizontal_alignment="right"):
+        run_solve = st.button("求解", type="primary", key="run_solve")
+
+    if run_solve:
         m, n_plus_one = augmented.shape
         n = n_plus_one - 1
         a = augmented[:, :n]
@@ -772,9 +983,15 @@ def page_solve() -> None:
         try:
             status, info = solve_linear(a, b)
             col1, col2, col3 = st.columns(3)
-            col1.metric("r(A)", info["rA"])
-            col2.metric("r(A|b)", info["rAb"])
-            col3.metric("未知数 n", info["n"])
+            with col1:
+                with st.container(border=True):
+                    st.metric("r(A)", info["rA"])
+            with col2:
+                with st.container(border=True):
+                    st.metric("r(A|b)", info["rAb"])
+            with col3:
+                with st.container(border=True):
+                    st.metric("未知数 n", info["n"])
 
             if status == "unique":
                 st.success("方程组有唯一解。")
@@ -796,17 +1013,22 @@ def page_solve() -> None:
 
 def page_quadratic() -> None:
     st.header("二次型 f = xᵀAx")
-    st.caption("输入方阵阶数可通过 −阶 / +阶 调整；默认是 2 阶单位矩阵。")
-    mat = matrix_input(
-        "矩阵 A",
-        "quadratic-a",
-        default=np.eye(2),
-        square=True,
-        min_rows=1,
-        symbol="A",
-    )
 
-    if st.button("分析", type="primary", key="run_quad"):
+    with st.container(border=True):
+        st.caption("输入方阵阶数可通过 −阶 / +阶 调整；默认是 2 阶单位矩阵。")
+        mat = matrix_input(
+            "矩阵 A",
+            "quadratic-a",
+            default=np.eye(2),
+            square=True,
+            min_rows=1,
+            symbol="A",
+        )
+
+    with st.container(horizontal=True, horizontal_alignment="right"):
+        run_quad = st.button("分析", type="primary", key="run_quad")
+
+    if run_quad:
         try:
             result = analyze_quadratic(mat)
             if not result["symmetric"]:
@@ -819,9 +1041,15 @@ def page_quadratic() -> None:
             st.markdown(f"经正交变换 x = Qy，标准形为：**f = {standard_form}**")
 
             c1, c2, c3 = st.columns(3)
-            c1.metric("正惯性指数 p", result["pos"])
-            c2.metric("负惯性指数 q", result["neg"])
-            c3.metric("零特征值个数", result["zero"])
+            with c1:
+                with st.container(border=True):
+                    st.metric("正惯性指数 p", result["pos"])
+            with c2:
+                with st.container(border=True):
+                    st.metric("负惯性指数 q", result["neg"])
+            with c3:
+                with st.container(border=True):
+                    st.metric("零特征值个数", result["zero"])
             st.success(f"判定结果：{result['kind']}")
 
             minors = result["minors"]
@@ -837,8 +1065,9 @@ def page_quadratic() -> None:
 
 
 def main() -> None:
-    st.title("🧮 矩阵计算器")
-    st.caption("NumPy 计算核心 + Streamlit 网页界面")
+    inject_theme()
+    st.title("矩阵计算器")
+    st.caption("NumPy 计算核心 · 线性代数学习工具")
 
     page = st.sidebar.radio(
         "功能",
