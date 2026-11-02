@@ -24,7 +24,7 @@ notebook = [
     "nbclient>=0.8",
 ]
 web = [
-    "streamlit>=1.40",
+    "streamlit>=1.57",
 ]
 
 [project.scripts]
