@@ -87,8 +87,34 @@ python -m pytest
 
 当前测试覆盖基础矩阵运算、线性方程组分类、零空间、二次型判定和格式化输出。
 
+## Notebook 演示与可视化
+
+`examples/linear_algebra_demo.ipynb` 演示如何把计算核心当作函数库使用，
+包含基础运算、线性方程组分类、二维线性变换图和 SVD 奇异值图。
+
+安装可视化依赖：
+
+```bash
+python -m pip install -e ".[notebook]"
+```
+
+启动 Notebook：
+
+```bash
+jupyter notebook examples/linear_algebra_demo.ipynb
+```
+
+只在代码里需要画图时，额外导入可视化模块（核心 CLI 不依赖 matplotlib）：
+
+```python
+import matplotlib.pyplot as plt
+from matrix_calculator.visualization import plot_linear_transform
+
+plot_linear_transform([[2, 1], [0, 1]])
+plt.show()
+```
+
 ## 后续计划
 
-- 增加 Jupyter Notebook 示例和线性代数可视化
 - 增加 Streamlit 交互界面
 - 可选引入 SymPy，支持分数、符号和初等行变换过程
