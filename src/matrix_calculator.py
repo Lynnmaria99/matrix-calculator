@@ -524,18 +524,18 @@ def op_quadratic():
     print(f"经正交变换 x = Qy，二次型化为标准形:\n  f = {_signed_poly(pairs)}")
 
     # 正定性
-    pos = np.sum(w > _EPS)
-    neg = np.sum(w < -_EPS)
+    pos = int(np.sum(w > _EPS))
+    neg = int(np.sum(w < -_EPS))
     zero = n - pos - neg
     if pos == n:
         kind = "【正定】(特征值全为正)"
     elif neg == n:
         kind = "【负定】(特征值全为负)"
-    elif neg == 0 and zero == 0:
-        kind = "【正定】"
-    elif pos == 0 and zero > 0 and neg == 0:
+    elif neg == 0 and zero > 0:
+        # 非负且至少含一个 0：正数+0 或全 0，均为半正定
         kind = "【半正定】(特征值非负且含 0)"
-    elif neg > 0 and pos == 0:
+    elif pos == 0 and zero > 0:
+        # 非正且至少含一个 0：负数+0，为半负定
         kind = "【半负定】(特征值非正且含 0)"
     elif pos > 0 and neg > 0:
         kind = "【不定】(特征值有正有负)"
