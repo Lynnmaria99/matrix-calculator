@@ -70,6 +70,13 @@ MATRIX_GRID_HTML = """
 """
 
 MATRIX_GRID_CSS = """
+.matrix-widget,
+.matrix-widget *,
+.matrix-widget *::before,
+.matrix-widget *::after {
+  box-sizing: border-box;
+}
+
 .matrix-widget {
   color: var(--st-text-color);
   font-family: var(--st-font-family, system-ui, sans-serif);
