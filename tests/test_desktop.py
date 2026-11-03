@@ -149,3 +149,72 @@ class TestMainWindow:
         window.input_b.table.setItem(0, 0, QTableWidgetItem("1"))
         window.compute_button.click()
         assert "不是数字" in window.error_label.text()
+
+class TestDesktopParity:
+    def test_quadratic_positive_definite(self, window):
+        window.op_combo.setCurrentText("二次型分析 f=xᵀAx")
+        assert window.input_b.isHidden()
+        _fill(window.input_a, [[2, 0], [0, 3]])
+        window.compute_button.click()
+        assert window.error_label.isHidden()
+        assert "正定" in window.result_label.text()
+        assert "标准形" in window.result_label.text()
+        window.details_group.setChecked(True)
+        assert "正惯性指数" in window.details_label.text()
+
+    def test_quadratic_asymmetric_note(self, window):
+        window.op_combo.setCurrentText("二次型分析 f=xᵀAx")
+        _fill(window.input_a, [[1, 2], [0, 3]])
+        window.compute_button.click()
+        assert "不对称" in window.result_label.text()
+
+    def test_example_buttons_rebuild_per_operation(self, window):
+        window.op_combo.setCurrentText("二次型分析 f=xᵀAx")
+        labels = []
+        for i in range(window.example_layout.count()):
+            widget = window.example_layout.itemAt(i).widget()
+            if widget is not None:
+                labels.append(widget.text())
+        assert labels == ["正定", "负定", "不定", "半正定"]
+
+    def test_solve_example_fills_a_and_b(self, window):
+        window.op_combo.setCurrentText("解线性方程组 Ax=b")
+        buttons = [
+            window.example_layout.itemAt(i).widget()
+            for i in range(window.example_layout.count())
+        ]
+        buttons = [b for b in buttons if b is not None]
+        buttons[0].click()  # 唯一解示例（增广矩阵拆成 A 和 b）
+        np.testing.assert_allclose(window.input_a.get_matrix(), [[1, 1], [2, -1]])
+        np.testing.assert_allclose(window.input_b.get_matrix(), [[3], [0]])
+
+    def test_binary_example_switches_operation(self, window):
+        window.op_combo.setCurrentText("矩阵加法 A+B")
+        buttons = [
+            window.example_layout.itemAt(i).widget()
+            for i in range(window.example_layout.count())
+        ]
+        buttons = [b for b in buttons if b is not None]
+        buttons[0].click()  # I＋交换矩阵
+        assert window.op_combo.currentText() == "矩阵加法 A+B"
+        np.testing.assert_allclose(window.input_a.get_matrix(), [[1, 0], [0, 1]])
+
+    def test_export_items_populated(self, window):
+        window.op_combo.setCurrentText("特征分解")
+        _fill(window.input_a, [[2, 0], [0, 3]])
+        window.compute_button.click()
+        labels = [label for label, _ in window._export_items]
+        assert labels == ["特征值", "特征向量"]
+        assert window.export_button.isEnabled()
+
+    def test_solve_infinite_export_items(self, window):
+        window.op_combo.setCurrentText("解线性方程组 Ax=b")
+        _fill(window.input_a, [[1, 1], [2, 2]])
+        _fill(window.input_b, [[1], [2]])
+        window.compute_button.click()
+        labels = [label for label, _ in window._export_items]
+        assert labels == ["特解xp", "基础解系"]
+
+    def test_export_disabled_before_compute(self, window):
+        window.op_combo.setCurrentText("转置 Aᵀ")
+        assert not window.export_button.isEnabled()

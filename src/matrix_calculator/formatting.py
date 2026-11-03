@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import io
+
 import numpy as np
 
 from .constants import EPS
@@ -100,3 +102,25 @@ def signed_polynomial(pairs):
 
 
 _signed_poly = signed_polynomial
+
+
+def matrix_to_csv_text(value) -> str:
+    """把矩阵转换成 CSV 文本，便于粘贴到 Excel 或数据分析工具中。"""
+    matrix = np.atleast_2d(np.asarray(value))
+    buffer = io.StringIO()
+    fmt = "%s" if np.iscomplexobj(matrix) else "%.12g"
+    np.savetxt(buffer, matrix, delimiter=",", fmt=fmt)
+    return buffer.getvalue()
+
+
+def matrix_to_numpy_text(value) -> str:
+    """把矩阵转换成可直接粘贴到 Python/Notebook 的 np.array 文本。"""
+    matrix = np.atleast_2d(np.asarray(value))
+    array_text = np.array2string(
+        matrix,
+        separator=", ",
+        threshold=10_000,
+        suppress_small=True,
+        precision=10,
+    )
+    return f"np.array({array_text})\n"
