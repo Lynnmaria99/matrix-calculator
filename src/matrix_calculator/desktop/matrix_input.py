@@ -54,13 +54,20 @@ class MatrixTableWidget(QWidget):
 
         self.table = _MatrixTable(rows, cols, self)
         self.title = QLabel(label)
+        self.title.setObjectName("H2")
 
         self.add_row_button = QPushButton("+ 行")
+        self.add_row_button.setObjectName("Ghost")
         self.remove_row_button = QPushButton("− 行")
+        self.remove_row_button.setObjectName("Ghost")
         self.add_col_button = QPushButton("+ 列")
+        self.add_col_button.setObjectName("Ghost")
         self.remove_col_button = QPushButton("− 列")
+        self.remove_col_button.setObjectName("Ghost")
         self.clear_button = QPushButton("清空")
+        self.clear_button.setObjectName("Ghost")
         self.example_button = QPushButton("加载示例")
+        self.example_button.setObjectName("Ghost")
 
         self.add_row_button.clicked.connect(self._add_row)
         self.remove_row_button.clicked.connect(self._remove_row)
@@ -193,3 +200,4 @@ class MatrixTableWidget(QWidget):
                     ) from exc
             values.append(row)
         return np.array(values, dtype=float)
+

@@ -10,9 +10,11 @@ def main() -> int:
     from PySide6.QtWidgets import QApplication
 
     from .main_window import MainWindow
+    from .style import STYLESHEET
 
     app = QApplication(sys.argv)
     app.setApplicationName("矩阵计算器")
+    app.setStyleSheet(STYLESHEET)
     window = MainWindow()
     window.show()
     return app.exec()

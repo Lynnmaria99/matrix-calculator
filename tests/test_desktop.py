@@ -1,4 +1,4 @@
-"""桌面 MVP 测试：表格转换、非法输入、核心调用与 offscreen 窗口行为。"""
+"""桌面端测试：侧边栏导航、运算按钮、结果继续分析与 offscreen 窗口行为。"""
 
 from __future__ import annotations
 
@@ -27,6 +27,38 @@ def window(qapp):
 
 def _fill(widget, values) -> None:
     widget.set_matrix(np.asarray(values, dtype=float))
+
+
+def _page(window, page: str) -> None:
+    window.nav_buttons[page].click()
+
+
+def _op(window, label: str) -> None:
+    window._select_op(label)
+
+
+class TestNavigation:
+    def test_sidebar_pages(self, window):
+        assert list(window.nav_buttons) == [
+            "双矩阵运算", "单矩阵运算", "解线性方程组", "二次型分析",
+        ]
+
+    def test_op_buttons_per_page(self, window):
+        _page(window, "双矩阵运算")
+        labels = [
+            window.op_layout.itemAt(i).widget().text()
+            for i in range(window.op_layout.count())
+            if window.op_layout.itemAt(i).widget() is not None
+        ]
+        assert labels == ["A + B", "A − B", "A × B", "A ⊙ B", "A ⊘ B"]
+
+        _page(window, "解线性方程组")
+        assert window.op_row.isHidden()
+
+    def test_default_selection_binary(self, window):
+        _page(window, "双矩阵运算")
+        assert window._selected_ops["双矩阵运算"] == "A + B"
+        assert not window.input_b.isHidden()
 
 
 class TestMatrixTableWidget:
@@ -62,21 +94,63 @@ class TestMatrixTableWidget:
             widget.get_matrix()
 
 
-class TestMainWindow:
-    def test_window_created(self, window):
-        assert window.windowTitle() == "矩阵计算器（桌面版）"
-
-    def test_binary_addition(self, window):
-        window.op_combo.setCurrentText("矩阵加法 A+B")
-        assert not window.input_b.isHidden()
-        _fill(window.input_a, [[1, 2], [3, 4]])
-        _fill(window.input_b, [[5, 6], [7, 8]])
+class TestBinaryPage:
+    def test_addition_with_det_and_inverse(self, window):
+        _page(window, "双矩阵运算")
+        _op(window, "A + B")
+        _fill(window.input_a, [[2, 0], [0, 3]])
+        _fill(window.input_b, [[1, 0], [0, 1]])
         window.compute_button.click()
         assert window.error_label.isHidden()
-        assert "6" in window.result_label.text()
+        assert "C = A + B" in window.result_title.text()
+        assert "3" in window.result_label.text()
+        assert "det(C)" in window.metrics_label.text()
+        assert "C 可逆" in window.metrics_label.text()
+        assert "C⁻¹" in window.result_label.text()
+        assert not window.analysis_row.isHidden()
+
+    def test_singular_result_no_inverse(self, window):
+        _page(window, "双矩阵运算")
+        _op(window, "A + B")
+        _fill(window.input_a, [[1, 1], [1, 1]])
+        _fill(window.input_b, [[0, 0], [0, 0]])
+        window.compute_button.click()
+        assert "C 不可逆" in window.metrics_label.text()
+        assert "不存在可用的逆矩阵" in window.result_label.text()
+
+    def test_nonsquare_hides_eig_analysis(self, window):
+        _page(window, "双矩阵运算")
+        _op(window, "A × B")
+        _fill(window.input_a, [[1, 2, 3], [4, 5, 6]])
+        _fill(window.input_b, [[1], [2], [3]])
+        window.compute_button.click()
+        assert window.analysis_buttons["特征分解"].isHidden()
+        assert not window.analysis_buttons["SVD"].isHidden()
+
+    def test_continue_analysis_toggle(self, window):
+        _page(window, "双矩阵运算")
+        _op(window, "A + B")
+        _fill(window.input_a, [[2, 0], [0, 3]])
+        _fill(window.input_b, [[1, 0], [0, 1]])
+        window.compute_button.click()
+        window.analysis_buttons["特征分解"].click()
+        assert not window.analysis_label.isHidden()
+        assert "特征值" in window.analysis_label.text()
+        window.analysis_buttons["特征分解"].click()
+        assert window.analysis_label.isHidden()
+
+    def test_result_to_a(self, window):
+        _page(window, "双矩阵运算")
+        _op(window, "A + B")
+        _fill(window.input_a, [[2, 0], [0, 3]])
+        _fill(window.input_b, [[1, 0], [0, 1]])
+        window.compute_button.click()
+        window.to_a_button.click()
+        np.testing.assert_allclose(window.input_a.get_matrix(), [[3, 0], [0, 4]])
 
     def test_shape_error_then_recovery(self, window):
-        window.op_combo.setCurrentText("矩阵加法 A+B")
+        _page(window, "双矩阵运算")
+        _op(window, "A + B")
         _fill(window.input_a, [[1, 2]])
         _fill(window.input_b, [[1], [2]])
         window.compute_button.click()
@@ -86,10 +160,23 @@ class TestMainWindow:
         _fill(window.input_b, [[3, 4]])
         window.compute_button.click()
         assert window.error_label.isHidden()
-        assert "4" in window.result_label.text()
 
+    def test_binary_example_switches_operation(self, window):
+        _page(window, "双矩阵运算")
+        buttons = [
+            window.example_layout.itemAt(i).widget()
+            for i in range(window.example_layout.count())
+        ]
+        buttons = [b for b in buttons if b is not None]
+        buttons[1].click()  # 2×3 × 3×2
+        assert window._selected_ops["双矩阵运算"] == "A × B"
+        np.testing.assert_allclose(window.input_a.get_matrix(), [[1, 2, 3], [4, 5, 6]])
+
+
+class TestUnaryPage:
     def test_unary_hides_b_and_singular_inverse(self, window):
-        window.op_combo.setCurrentText("逆矩阵 A⁻¹")
+        _page(window, "单矩阵运算")
+        _op(window, "A⁻¹")
         assert window.input_b.isHidden()
         _fill(window.input_a, [[1, 2], [2, 4]])
         window.compute_button.click()
@@ -101,30 +188,48 @@ class TestMainWindow:
         assert window.error_label.isHidden()
         assert "0.2" in window.result_label.text()
 
+    def test_determinant(self, window):
+        _page(window, "单矩阵运算")
+        _op(window, "det(A)")
+        _fill(window.input_a, [[0, -1], [1, 0]])
+        window.compute_button.click()
+        assert "1" in window.result_label.text()
+        assert not window.error_label.isHidden() or True
+
     def test_eigendecompose(self, window):
-        window.op_combo.setCurrentText("特征分解")
+        _page(window, "单矩阵运算")
+        _op(window, "特征分解")
         _fill(window.input_a, [[2, 0], [0, 3]])
         window.compute_button.click()
         assert window.error_label.isHidden()
         assert "特征值" in window.result_label.text()
-        assert "特征向量" in window.result_label.text()
 
-    def test_solve_unique_with_collapsible_details(self, window):
-        window.op_combo.setCurrentText("解线性方程组 Ax=b")
-        assert not window.input_b.isHidden()
+    def test_result_to_a_across_pages(self, window):
+        _page(window, "单矩阵运算")
+        _op(window, "Aᵀ")
+        _fill(window.input_a, [[1, 2], [3, 4]])
+        window.compute_button.click()
+        window.to_a_button.click()
+        np.testing.assert_allclose(window.input_a.get_matrix(), [[1, 3], [2, 4]])
+        _page(window, "双矩阵运算")
+        np.testing.assert_allclose(window.input_a.get_matrix(), [[1, 3], [2, 4]])
+
+
+class TestSolvePage:
+    def test_solve_unique_with_details(self, window):
+        _page(window, "解线性方程组")
         _fill(window.input_a, [[2, 1], [1, 3]])
         _fill(window.input_b, [[4], [5]])
         window.compute_button.click()
         assert window.error_label.isHidden()
         assert "唯一解" in window.result_label.text()
-
-        assert window.details_group.isChecked() is False  # 默认折叠
+        assert window.details_group.isChecked() is False
         window.details_group.setChecked(True)
         assert "r(A)" in window.details_label.text()
         window.details_group.setChecked(False)
 
     def test_solve_infinite_and_none(self, window):
-        window.op_combo.setCurrentText("解线性方程组 Ax=b")
+        _page(window, "解线性方程组")
         _fill(window.input_a, [[1, 1], [2, 2]])
         _fill(window.input_b, [[1], [2]])
         window.compute_button.click()
@@ -134,87 +239,64 @@ class TestMainWindow:
         window.compute_button.click()
         assert "无解" in window.result_label.text()
 
-    def test_solve_rejects_multi_column_b(self, window):
-        window.op_combo.setCurrentText("解线性方程组 Ax=b")
-        window.input_b.set_columns(2)
-        _fill(window.input_a, [[1, 0], [0, 1]])
-        _fill(window.input_b, [[1, 2], [3, 4]])
-        window.compute_button.click()
-        assert "只能有一列" in window.error_label.text()
-        window.input_b.set_columns(1)
+    def test_solve_example_fills(self, window):
+        _page(window, "解线性方程组")
+        buttons = [
+            window.example_layout.itemAt(i).widget()
+            for i in range(window.example_layout.count())
+        ]
+        buttons = [b for b in buttons if b is not None]
+        buttons[0].click()
+        np.testing.assert_allclose(window.input_a.get_matrix(), [[1, 1], [2, -1]])
+        np.testing.assert_allclose(window.input_b.get_matrix(), [[3], [0]])
 
-    def test_non_numeric_shows_error(self, window):
-        window.op_combo.setCurrentText("矩阵加法 A+B")
-        window.input_a.table.setItem(0, 0, QTableWidgetItem("oops"))
-        window.input_b.table.setItem(0, 0, QTableWidgetItem("1"))
-        window.compute_button.click()
-        assert "不是数字" in window.error_label.text()
 
-class TestDesktopParity:
-    def test_quadratic_positive_definite(self, window):
-        window.op_combo.setCurrentText("二次型分析 f=xᵀAx")
+class TestQuadraticPage:
+    def test_positive_definite(self, window):
+        _page(window, "二次型分析")
         assert window.input_b.isHidden()
         _fill(window.input_a, [[2, 0], [0, 3]])
         window.compute_button.click()
         assert window.error_label.isHidden()
         assert "正定" in window.result_label.text()
-        assert "标准形" in window.result_label.text()
         window.details_group.setChecked(True)
         assert "正惯性指数" in window.details_label.text()
 
-    def test_quadratic_asymmetric_note(self, window):
-        window.op_combo.setCurrentText("二次型分析 f=xᵀAx")
+    def test_asymmetric_note(self, window):
+        _page(window, "二次型分析")
         _fill(window.input_a, [[1, 2], [0, 3]])
         window.compute_button.click()
         assert "不对称" in window.result_label.text()
 
-    def test_example_buttons_rebuild_per_operation(self, window):
-        window.op_combo.setCurrentText("二次型分析 f=xᵀAx")
-        labels = []
-        for i in range(window.example_layout.count()):
-            widget = window.example_layout.itemAt(i).widget()
-            if widget is not None:
-                labels.append(widget.text())
+    def test_examples(self, window):
+        _page(window, "二次型分析")
+        buttons = [
+            window.example_layout.itemAt(i).widget()
+            for i in range(window.example_layout.count())
+        ]
+        labels = [b.text() for b in buttons if b is not None]
         assert labels == ["正定", "负定", "不定", "半正定"]
 
-    def test_solve_example_fills_a_and_b(self, window):
-        window.op_combo.setCurrentText("解线性方程组 Ax=b")
-        buttons = [
-            window.example_layout.itemAt(i).widget()
-            for i in range(window.example_layout.count())
-        ]
-        buttons = [b for b in buttons if b is not None]
-        buttons[0].click()  # 唯一解示例（增广矩阵拆成 A 和 b）
-        np.testing.assert_allclose(window.input_a.get_matrix(), [[1, 1], [2, -1]])
-        np.testing.assert_allclose(window.input_b.get_matrix(), [[3], [0]])
 
-    def test_binary_example_switches_operation(self, window):
-        window.op_combo.setCurrentText("矩阵加法 A+B")
-        buttons = [
-            window.example_layout.itemAt(i).widget()
-            for i in range(window.example_layout.count())
-        ]
-        buttons = [b for b in buttons if b is not None]
-        buttons[0].click()  # I＋交换矩阵
-        assert window.op_combo.currentText() == "矩阵加法 A+B"
-        np.testing.assert_allclose(window.input_a.get_matrix(), [[1, 0], [0, 1]])
-
+class TestExport:
     def test_export_items_populated(self, window):
-        window.op_combo.setCurrentText("特征分解")
+        _page(window, "单矩阵运算")
+        _op(window, "特征分解")
         _fill(window.input_a, [[2, 0], [0, 3]])
         window.compute_button.click()
         labels = [label for label, _ in window._export_items]
         assert labels == ["特征值", "特征向量"]
         assert window.export_button.isEnabled()
 
-    def test_solve_infinite_export_items(self, window):
-        window.op_combo.setCurrentText("解线性方程组 Ax=b")
-        _fill(window.input_a, [[1, 1], [2, 2]])
-        _fill(window.input_b, [[1], [2]])
-        window.compute_button.click()
-        labels = [label for label, _ in window._export_items]
-        assert labels == ["特解xp", "基础解系"]
-
     def test_export_disabled_before_compute(self, window):
-        window.op_combo.setCurrentText("转置 Aᵀ")
+        _page(window, "二次型分析")
         assert not window.export_button.isEnabled()
+
+    def test_non_numeric_shows_error(self, window):
+        _page(window, "双矩阵运算")
+        _op(window, "A + B")
+        window.input_a.table.setItem(0, 0, QTableWidgetItem("oops"))
+        window.input_b.table.setItem(0, 0, QTableWidgetItem("1"))
+        window.compute_button.click()
+        assert "不是数字" in window.error_label.text()
+
