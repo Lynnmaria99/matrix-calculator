@@ -309,3 +309,11 @@ class TestSidebarToggle:
         assert window.sidebar.isHidden()
         window.sidebar_toggle.click()
         assert not window.sidebar.isHidden()
+
+class TestScrollLayout:
+    def test_content_in_scroll_area(self, window):
+        from PySide6.QtWidgets import QScrollArea
+
+        scroll = window.findChild(QScrollArea)
+        assert scroll is not None
+        assert scroll.widgetResizable() is True

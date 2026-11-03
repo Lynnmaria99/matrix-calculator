@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QMenu,
     QPushButton,
+    QScrollArea,
     QVBoxLayout,
     QWidget,
 )
@@ -197,7 +198,7 @@ class MainWindow(QWidget):
         root.setContentsMargins(16, 16, 16, 16)
         root.setSpacing(16)
         root.addWidget(self._build_sidebar())
-        root.addLayout(self._build_content(), stretch=1)
+        root.addWidget(self._build_content(), stretch=1)
 
     def _build_sidebar(self) -> QFrame:
         self.sidebar = QFrame()
@@ -239,9 +240,12 @@ class MainWindow(QWidget):
         side.addWidget(footer)
         return self.sidebar
 
-    def _build_content(self) -> QVBoxLayout:
-        content = QVBoxLayout()
-        content.setSpacing(10)
+    def _build_content(self) -> QWidget:
+        body = QWidget()
+        body.setObjectName("ContentBody")
+        content = QVBoxLayout(body)
+        content.setContentsMargins(4, 0, 8, 16)
+        content.setSpacing(12)
 
         head = QHBoxLayout()
         head.setSpacing(10)
@@ -304,8 +308,17 @@ class MainWindow(QWidget):
 
         content.addWidget(self._build_result_card())
         content.addWidget(self._build_details())
-        content.addStretch(1)
-        return content
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scroll.setStyleSheet(
+            "QScrollArea { background: transparent; }"
+            "QScrollArea > QWidget > QWidget { background: transparent; }"
+        )
+        scroll.setWidget(body)
+        return scroll
 
     def _build_result_card(self) -> QFrame:
         self.result_card = QFrame()
@@ -758,4 +771,6 @@ class MainWindow(QWidget):
             details,
             [("最小二乘近似解", x_ls)],
         )
+
+
 
