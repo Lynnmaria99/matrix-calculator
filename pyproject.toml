@@ -23,6 +23,9 @@ notebook = [
     "nbformat>=5",
     "nbclient>=0.8",
 ]
+web = [
+    "streamlit>=1.57",
+]
 
 [project.scripts]
 matrix-calculator = "matrix_calculator.cli:main"

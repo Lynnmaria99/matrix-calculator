@@ -22,3 +22,6 @@ venv/
 # Jupyter
 .ipynb_checkpoints/
 **/.ipynb_checkpoints/
+
+# Streamlit 本地密钥
+.streamlit/secrets.toml

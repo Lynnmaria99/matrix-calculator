@@ -26,6 +26,7 @@ src/matrix_calculator/
 
 src/matrix_calculator.py # 兼容旧运行方式的薄入口
 tests/                   # pytest 测试
+streamlit_app.py        # Streamlit 网页界面（初版）
 ```
 
 核心设计原则：**数学计算函数不直接读取输入，也不直接打印结果**。参数不合法时抛出 `MatrixOperationError`，由命令行、Notebook 或未来的 GUI 决定如何展示。
@@ -114,7 +115,25 @@ plot_linear_transform([[2, 1], [0, 1]])
 plt.show()
 ```
 
+## Streamlit 网页界面
+
+项目提供一个初版 Streamlit 界面，支持双矩阵运算、单矩阵运算、
+线性方程组求解和二次型分析。
+
+安装 Web 依赖：
+
+```bash
+python -m pip install -e ".[web]"
+```
+
+启动：
+
+```bash
+streamlit run streamlit_app.py
+```
+
+浏览器会自动打开本地页面；也可以访问终端中显示的本地地址。
+
 ## 后续计划
 
-- 增加 Streamlit 交互界面
 - 可选引入 SymPy，支持分数、符号和初等行变换过程
