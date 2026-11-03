@@ -406,3 +406,32 @@ class TestPlots:
         _fill(window.input_b, [[0, 1, 0], [1, 0, 0]])
         window.compute_button.click()
         assert window.plot_section.isHidden()
+
+
+class TestPlotToggle:
+    def test_toggle_off_hides_plot(self, window):
+        _page(window, "单矩阵运算")
+        _op(window, "SVD")
+        _fill(window.input_a, [[3, 0], [0, 1]])
+        window.plot_toggle.click()  # 关闭图示
+        window.compute_button.click()
+        assert window.plot_section.isHidden()
+
+    def test_toggle_on_renders_last_result(self, window):
+        _page(window, "单矩阵运算")
+        _op(window, "SVD")
+        _fill(window.input_a, [[3, 0], [0, 1]])
+        if window.plot_toggle.isChecked():
+            window.plot_toggle.click()  # 确保从关闭状态开始
+        window.compute_button.click()
+        assert window.plot_section.isHidden()
+        window.plot_toggle.click()  # 重新打开 → 用上次结果立即补图
+        assert not window.plot_section.isHidden()
+        assert window._plot_canvas.figure.axes
+
+    def test_plot_below_details(self, window):
+        # 图示区与"中间结果/解释"同级，且位于其后
+        assert window.details_group.parent() is window.plot_section.parent()
+        layout = window.details_group.parent().layout()
+        assert layout.indexOf(window.details_group) < layout.indexOf(window.plot_section)
+

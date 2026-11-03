@@ -190,6 +190,8 @@ class MainWindow(QWidget):
         self._analysis_active: str | None = None
         self._export_items: list[tuple[str, np.ndarray]] = []
         self._plot_canvas = None
+        self._show_plots = True
+        self._pending_plot = None
         self._build_ui()
         self._on_page_changed("双矩阵运算")
 
@@ -316,6 +318,7 @@ class MainWindow(QWidget):
 
         content.addWidget(self._build_result_card())
         content.addWidget(self._build_details())
+        content.addWidget(self.plot_section)
 
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
@@ -392,6 +395,12 @@ class MainWindow(QWidget):
         self.export_button.setObjectName("Ghost")
         self.export_button.setEnabled(False)
         self.export_button.clicked.connect(self._on_export)
+        self.plot_toggle = QPushButton("图示")
+        self.plot_toggle.setObjectName("Pill")
+        self.plot_toggle.setCheckable(True)
+        self.plot_toggle.setChecked(True)
+        self.plot_toggle.setToolTip("勾选时，支持图示的运算会在结果下方自动绘图")
+        self.plot_toggle.clicked.connect(self._toggle_plots)
         self.to_a_button = QPushButton("结果 → A")
         self.to_a_button.setObjectName("Ghost")
         self.to_a_button.setEnabled(False)
@@ -535,6 +544,7 @@ class MainWindow(QWidget):
         self.metrics_label.setHidden(True)
         self.metrics_label.setText("")
         self.plot_section.setHidden(True)
+        self._pending_plot = None
         self.analysis_row.setHidden(True)
         self.analysis_label.setHidden(True)
         self.analysis_label.setText("")
@@ -611,6 +621,17 @@ class MainWindow(QWidget):
         return self._plot_canvas
 
     def _update_plot(self, name: str, *args) -> None:
+        self._pending_plot = (name, args)
+        if not self._show_plots:
+            self.plot_section.setHidden(True)
+            return
+        self._render_plot()
+
+    def _render_plot(self) -> None:
+        if self._pending_plot is None:
+            self.plot_section.setHidden(True)
+            return
+        name, args = self._pending_plot
         try:
             from . import plots
 
@@ -629,6 +650,14 @@ class MainWindow(QWidget):
             self.plot_section.setHidden(True)
             return
         self.plot_section.setHidden(False)
+
+    def _toggle_plots(self, checked: bool) -> None:
+        """手动控制是否显示图示；重新打开时用上一次计算结果立即补图。"""
+        self._show_plots = checked
+        if checked:
+            self._render_plot()
+        else:
+            self.plot_section.setHidden(True)
 
     def _show_result(
         self, title: str, text: str, items: list[tuple[str, np.ndarray]]
@@ -838,6 +867,7 @@ class MainWindow(QWidget):
             details,
             [("最小二乘近似解", x_ls)],
         )
+
 
 
 
