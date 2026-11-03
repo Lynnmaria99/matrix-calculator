@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
     QMenu,
     QPushButton,
     QScrollArea,
+    QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
@@ -204,7 +205,6 @@ class MainWindow(QWidget):
         self.sidebar = QFrame()
         self.sidebar.setObjectName("Sidebar")
         self.sidebar.setFixedWidth(210)
-        _add_shadow(self.sidebar)
         side = QVBoxLayout(self.sidebar)
         side.setContentsMargins(12, 18, 12, 18)
         side.setSpacing(4)
@@ -238,6 +238,8 @@ class MainWindow(QWidget):
         footer.setObjectName("Caption")
         footer.setWordWrap(True)
         side.addWidget(footer)
+
+        self._sidebar_hiding = False
         return self.sidebar
 
     def _build_content(self) -> QWidget:
@@ -262,13 +264,18 @@ class MainWindow(QWidget):
         head.addStretch(1)
         content.addLayout(head)
 
-        self.op_row = QWidget()
+        self.op_row = QFrame()
+        self.op_row.setObjectName("Segment")
         self.op_layout = QHBoxLayout(self.op_row)
-        self.op_layout.setContentsMargins(0, 0, 0, 0)
+        self.op_layout.setContentsMargins(3, 3, 3, 3)
         self.op_layout.setSpacing(8)
         self.op_group = QButtonGroup(self)
         self.op_group.setExclusive(True)
-        content.addWidget(self.op_row)
+        op_wrap = QHBoxLayout()
+        op_wrap.setContentsMargins(0, 0, 0, 0)
+        op_wrap.addWidget(self.op_row)
+        op_wrap.addStretch(1)
+        content.addLayout(op_wrap)
 
         self.example_row = QWidget()
         self.example_layout = QHBoxLayout(self.example_row)
@@ -323,7 +330,6 @@ class MainWindow(QWidget):
     def _build_result_card(self) -> QFrame:
         self.result_card = QFrame()
         self.result_card.setObjectName("Card")
-        _add_shadow(self.result_card)
         card = QVBoxLayout(self.result_card)
         card.setContentsMargins(16, 14, 16, 14)
         card.setSpacing(8)
@@ -340,16 +346,17 @@ class MainWindow(QWidget):
         self.metrics_label.setWordWrap(True)
         self.metrics_label.setHidden(True)
 
-        self.analysis_row = QWidget()
+        self.analysis_row = QFrame()
+        self.analysis_row.setObjectName("Segment")
         self.analysis_layout = QHBoxLayout(self.analysis_row)
-        self.analysis_layout.setContentsMargins(0, 0, 0, 0)
+        self.analysis_layout.setContentsMargins(3, 3, 3, 3)
         self.analysis_layout.setSpacing(6)
         self.analysis_group = QButtonGroup(self)
         self.analysis_group.setExclusive(False)
         self.analysis_buttons: dict[str, QPushButton] = {}
         for code in ANALYSIS_OPS:
             button = QPushButton(code)
-            button.setObjectName("Pill")
+            button.setObjectName("SegmentButton")
             button.setCheckable(True)
             button.setCursor(Qt.PointingHandCursor)
             button.clicked.connect(
@@ -391,7 +398,11 @@ class MainWindow(QWidget):
         card.addWidget(self.result_title)
         card.addWidget(self.result_label)
         card.addWidget(self.metrics_label)
-        card.addWidget(self.analysis_row)
+        analysis_wrap = QHBoxLayout()
+        analysis_wrap.setContentsMargins(0, 0, 0, 0)
+        analysis_wrap.addWidget(self.analysis_row)
+        analysis_wrap.addStretch(1)
+        card.addLayout(analysis_wrap)
         card.addWidget(self.analysis_label)
         card.addLayout(actions)
         return self.result_card
@@ -410,7 +421,7 @@ class MainWindow(QWidget):
     # ---------------- 页面与按钮 ----------------
 
     def _toggle_sidebar(self) -> None:
-        """收起或展开侧边栏（Shapr3D 式面板开关）。"""
+        """收起或展开侧边栏。"""
         self.sidebar.setHidden(not self.sidebar.isHidden())
     def _on_page_changed(self, page: str) -> None:
         self._current_page = page
@@ -431,7 +442,7 @@ class MainWindow(QWidget):
         self.op_row.setHidden(not ops)
         for label in ops:
             button = QPushButton(label)
-            button.setObjectName("Pill")
+            button.setObjectName("SegmentButton")
             button.setCheckable(True)
             button.setCursor(Qt.PointingHandCursor)
             button.clicked.connect(lambda checked=False, l=label: self._select_op(l))
@@ -771,6 +782,16 @@ class MainWindow(QWidget):
             details,
             [("最小二乘近似解", x_ls)],
         )
+
+
+
+
+
+
+
+
+
+
 
 
 
