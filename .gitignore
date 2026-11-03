@@ -30,3 +30,5 @@ venv/
 .tmp-playwright/
 .tmp_*.py
 foundation-*.png
+
+crash_log*.txt

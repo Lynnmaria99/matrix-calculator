@@ -1,16 +1,18 @@
-"""桌面端矩阵输入组件：表格输入、行列调整、粘贴与数值转换。"""
+"""桌面端矩阵输入组件：逐格输入框、行列调整、粘贴与数值转换。"""
 
 from __future__ import annotations
 
 import numpy as np
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QKeySequence
 from PySide6.QtWidgets import (
     QApplication,
+    QFrame,
+    QGridLayout,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QPushButton,
-    QTableWidget,
-    QTableWidgetItem,
     QVBoxLayout,
     QWidget,
 )
@@ -21,12 +23,16 @@ from ..operations import MatrixOperationError
 MAX_DIMENSION = 12
 
 
-class _MatrixTable(QTableWidget):
-    """支持 Ctrl+V 粘贴文本数据的表格。"""
+class _CellEdit(QLineEdit):
+    """单个矩阵元素输入框，支持 Ctrl+V 粘贴整块数据。"""
 
-    def __init__(self, rows: int, cols: int, wrapper: "MatrixTableWidget", parent=None):
-        super().__init__(rows, cols, parent)
+    def __init__(self, wrapper: "MatrixTableWidget", parent=None):
+        super().__init__(parent)
         self.wrapper = wrapper
+        self.setObjectName("Cell")
+        self.setAlignment(Qt.AlignCenter)
+        self.setFixedWidth(64)
+        self.setPlaceholderText("0")
 
     def keyPressEvent(self, event) -> None:  # noqa: N802 (Qt 命名约定)
         if event.matches(QKeySequence.Paste):
@@ -35,8 +41,52 @@ class _MatrixTable(QTableWidget):
         super().keyPressEvent(event)
 
 
+class _MatrixGrid(QWidget):
+    """逐格输入网格。
+
+    固定预建 ``MAX_DIMENSION × MAX_DIMENSION`` 个输入框，调整行列数时只
+    切换可见性：避免动态创建/销毁控件，数值也天然保留。
+    """
+
+    def __init__(self, rows: int, cols: int, wrapper: "MatrixTableWidget", parent=None):
+        super().__init__(parent)
+        self.wrapper = wrapper
+        self._layout = QGridLayout(self)
+        self._layout.setContentsMargins(0, 0, 0, 0)
+        self._layout.setSpacing(6)
+        self._cells: list[list[_CellEdit]] = [
+            [_CellEdit(wrapper) for _ in range(MAX_DIMENSION)]
+            for _ in range(MAX_DIMENSION)
+        ]
+        for i in range(MAX_DIMENSION):
+            for j in range(MAX_DIMENSION):
+                self._layout.addWidget(self._cells[i][j], i, j)
+        self._rows = 0
+        self._cols = 0
+        self.set_dimensions(rows, cols)
+
+    def set_dimensions(self, rows: int, cols: int) -> None:
+        rows = max(0, min(int(rows), MAX_DIMENSION))
+        cols = max(0, min(int(cols), MAX_DIMENSION))
+        self._rows = rows
+        self._cols = cols
+        for i in range(MAX_DIMENSION):
+            for j in range(MAX_DIMENSION):
+                self._cells[i][j].setVisible(i < rows and j < cols)
+
+    @property
+    def rows(self) -> int:
+        return self._rows
+
+    @property
+    def cols(self) -> int:
+        return self._cols
+
+    def cell(self, i: int, j: int) -> _CellEdit:
+        return self._cells[i][j]
+
 class MatrixTableWidget(QWidget):
-    """带工具栏的表格矩阵输入，负责把单元格内容转换为 NumPy 数组。"""
+    """带括号的逐格矩阵输入，负责把单元格内容转换为 NumPy 数组。"""
 
     def __init__(
         self,
@@ -52,7 +102,7 @@ class MatrixTableWidget(QWidget):
         self._label = label
         self._example = example
 
-        self.table = _MatrixTable(rows, cols, self)
+        self.grid = _MatrixGrid(rows, cols, self)
         self.title = QLabel(label)
         self.title.setObjectName("H2")
 
@@ -79,6 +129,7 @@ class MatrixTableWidget(QWidget):
         buttons = QWidget()
         buttons_layout = QHBoxLayout(buttons)
         buttons_layout.setContentsMargins(0, 0, 0, 0)
+        buttons_layout.setSpacing(6)
         for button in (
             self.add_row_button,
             self.remove_row_button,
@@ -89,11 +140,27 @@ class MatrixTableWidget(QWidget):
         ):
             buttons_layout.addWidget(button)
 
+        # 教材风格括号：左右两个竖框
+        self.left_bracket = QFrame()
+        self.left_bracket.setObjectName("BracketL")
+        self.left_bracket.setFixedWidth(10)
+        self.right_bracket = QFrame()
+        self.right_bracket.setObjectName("BracketR")
+        self.right_bracket.setFixedWidth(10)
+
+        matrix_row = QHBoxLayout()
+        matrix_row.setSpacing(2)
+        matrix_row.addWidget(self.left_bracket)
+        matrix_row.addWidget(self.grid, stretch=1)
+        matrix_row.addWidget(self.right_bracket)
+        matrix_row.addStretch(1)
+
         outer = QVBoxLayout(self)
         outer.setContentsMargins(0, 0, 0, 0)
+        outer.setSpacing(6)
         outer.addWidget(self.title)
         outer.addWidget(buttons)
-        outer.addWidget(self.table)
+        outer.addLayout(matrix_row)
 
         self._col_buttons = [self.add_col_button, self.remove_col_button]
         self.set_column_resize_enabled(resize_cols)
@@ -109,44 +176,47 @@ class MatrixTableWidget(QWidget):
             button.setVisible(enabled)
 
     def set_columns(self, cols: int) -> None:
-        self.table.setColumnCount(cols)
+        self.grid.set_dimensions(self.grid.rows, cols)
 
     def _add_row(self) -> None:
-        if self.table.rowCount() >= MAX_DIMENSION:
+        if self.grid.rows >= MAX_DIMENSION:
             return
-        self.table.insertRow(self.table.rowCount())
+        self.grid.set_dimensions(self.grid.rows + 1, self.grid.cols)
 
     def _remove_row(self) -> None:
-        if self.table.rowCount() <= 1:
+        if self.grid.rows <= 1:
             return
-        self.table.removeRow(self.table.rowCount() - 1)
+        self.grid.set_dimensions(self.grid.rows - 1, self.grid.cols)
 
     def _add_col(self) -> None:
-        if self.table.columnCount() >= MAX_DIMENSION:
+        if self.grid.cols >= MAX_DIMENSION:
             return
-        self.table.insertColumn(self.table.columnCount())
+        self.grid.set_dimensions(self.grid.rows, self.grid.cols + 1)
 
     def _remove_col(self) -> None:
-        if self.table.columnCount() <= 1:
+        if self.grid.cols <= 1:
             return
-        self.table.removeColumn(self.table.columnCount() - 1)
+        self.grid.set_dimensions(self.grid.rows, self.grid.cols - 1)
 
     def clear_cells(self) -> None:
-        for i in range(self.table.rowCount()):
-            for j in range(self.table.columnCount()):
-                self.table.setItem(i, j, QTableWidgetItem(""))
+        for i in range(self.grid.rows):
+            for j in range(self.grid.cols):
+                self.grid.cell(i, j).clear()
 
     def load_example(self) -> None:
         if self._example is not None:
             self.set_matrix(self._example)
 
+    def set_cell(self, i: int, j: int, text: str) -> None:
+        self.grid.cell(i, j).setText(text)
+
     def paste_from_clipboard(self) -> None:
-        """把剪贴板中的制表符/空白分隔文本填入表格。"""
+        """把剪贴板中的制表符/空白分隔文本从焦点格开始填入。"""
         text = QApplication.clipboard().text()
         if not text.strip():
             return
         lines = [line for line in text.strip().splitlines() if line.strip()]
-        rows = []
+        rows: list[list[str]] = []
         for line in lines:
             if "\t" in line:
                 cells = [c.strip() for c in line.split("\t")]
@@ -154,40 +224,46 @@ class MatrixTableWidget(QWidget):
                 cells = line.replace(",", " ").split()
             rows.append(cells)
 
-        row0 = max(self.table.currentRow(), 0)
-        col0 = max(self.table.currentColumn(), 0)
-        need_rows = min(MAX_DIMENSION, max(self.table.rowCount(), row0 + len(rows)))
+        row0, col0 = self._focused_cell()
+        need_rows = min(
+            MAX_DIMENSION, max(self.grid.rows, row0 + len(rows))
+        )
         need_cols = min(
             MAX_DIMENSION,
-            max(self.table.columnCount(), col0 + max(len(r) for r in rows)),
+            max(self.grid.cols, col0 + max(len(r) for r in rows)),
         )
-        self.table.setRowCount(need_rows)
-        self.table.setColumnCount(need_cols)
+        self.grid.set_dimensions(need_rows, need_cols)
         for i, cells in enumerate(rows):
-            for j, cell in enumerate(cells):
+            for j, cell_text in enumerate(cells):
                 if row0 + i < need_rows and col0 + j < need_cols:
-                    self.table.setItem(row0 + i, col0 + j, QTableWidgetItem(cell))
+                    self.set_cell(row0 + i, col0 + j, cell_text)
+
+    def _focused_cell(self) -> tuple[int, int]:
+        focused = QApplication.focusWidget()
+        for i, row in enumerate(self.grid._cells):
+            for j, cell in enumerate(row):
+                if cell is focused:
+                    return i, j
+        return 0, 0
 
     def set_matrix(self, mat) -> None:
-        """用数组填充表格并调整行列数。"""
+        """用数组填充输入框并调整行列数。"""
         mat = np.atleast_2d(np.asarray(mat, dtype=float))
-        self.table.setRowCount(mat.shape[0])
-        self.table.setColumnCount(mat.shape[1])
+        self.grid.set_dimensions(mat.shape[0], mat.shape[1])
         for i in range(mat.shape[0]):
             for j in range(mat.shape[1]):
-                self.table.setItem(i, j, QTableWidgetItem(format_scalar(mat[i, j])))
+                self.set_cell(i, j, format_scalar(mat[i, j]))
 
     def get_matrix(self) -> np.ndarray:
-        """校验并转换表格内容，非法输入抛出面向用户的 ``MatrixOperationError``。"""
-        rows, cols = self.table.rowCount(), self.table.columnCount()
+        """校验并转换输入内容，非法输入抛出面向用户的 ``MatrixOperationError``。"""
+        rows, cols = self.grid.rows, self.grid.cols
         if rows == 0 or cols == 0:
             raise MatrixOperationError(f"{self._label} 不能为空矩阵")
         values = []
         for i in range(rows):
             row = []
             for j in range(cols):
-                item = self.table.item(i, j)
-                text = item.text().strip() if item is not None else ""
+                text = self.grid.cell(i, j).text().strip()
                 if not text:
                     raise MatrixOperationError(
                         f"{self._label} 第 {i + 1} 行第 {j + 1} 列为空，请填写数字"

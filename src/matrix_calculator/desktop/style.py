@@ -63,18 +63,31 @@ STYLESHEET = """
 }
 #Ghost:hover { background: rgba(255, 255, 255, 0.88); }
 #Ghost:disabled { color: rgba(29, 29, 31, 0.3); }
-QTableWidget {
-    background: rgba(255, 255, 255, 0.85);
-    border: 1px solid rgba(255, 255, 255, 0.92);
-    border-radius: 12px;
-    gridline-color: rgba(29, 29, 31, 0.08);
-    selection-background-color: rgba(0, 113, 227, 0.16);
+QLineEdit#Cell {
+    background: rgba(255, 255, 255, 0.88);
+    border: 1px solid rgba(29, 29, 31, 0.10);
+    border-radius: 8px;
+    padding: 4px 6px;
 }
-QHeaderView::section {
-    background: rgba(255, 255, 255, 0.72);
-    border: none;
-    border-bottom: 1px solid rgba(29, 29, 31, 0.08);
-    padding: 4px;
+QLineEdit#Cell:focus {
+    border: 1px solid #0071e3;
+    background: #ffffff;
+}
+#BracketL {
+    border-left: 2px solid rgba(29, 29, 31, 0.5);
+    border-top: 2px solid rgba(29, 29, 31, 0.5);
+    border-bottom: 2px solid rgba(29, 29, 31, 0.5);
+    border-top-left-radius: 10px;
+    border-bottom-left-radius: 10px;
+    background: transparent;
+}
+#BracketR {
+    border-right: 2px solid rgba(29, 29, 31, 0.5);
+    border-top: 2px solid rgba(29, 29, 31, 0.5);
+    border-bottom: 2px solid rgba(29, 29, 31, 0.5);
+    border-top-right-radius: 10px;
+    border-bottom-right-radius: 10px;
+    background: transparent;
 }
 QGroupBox {
     background: rgba(255, 255, 255, 0.5);

@@ -243,9 +243,20 @@ class MainWindow(QWidget):
         content = QVBoxLayout()
         content.setSpacing(10)
 
+        head = QHBoxLayout()
+        head.setSpacing(10)
+        self.sidebar_toggle = QPushButton("☰")
+        self.sidebar_toggle.setObjectName("Ghost")
+        self.sidebar_toggle.setFixedWidth(40)
+        self.sidebar_toggle.setCursor(Qt.PointingHandCursor)
+        self.sidebar_toggle.setToolTip("收起 / 展开侧边栏")
+        self.sidebar_toggle.clicked.connect(self._toggle_sidebar)
+        head.addWidget(self.sidebar_toggle)
         self.page_title = QLabel("双矩阵运算")
         self.page_title.setObjectName("Title")
-        content.addWidget(self.page_title)
+        head.addWidget(self.page_title)
+        head.addStretch(1)
+        content.addLayout(head)
 
         self.op_row = QWidget()
         self.op_layout = QHBoxLayout(self.op_row)
@@ -385,6 +396,9 @@ class MainWindow(QWidget):
 
     # ---------------- 页面与按钮 ----------------
 
+    def _toggle_sidebar(self) -> None:
+        """收起或展开侧边栏（Shapr3D 式面板开关）。"""
+        self.sidebar.setHidden(not self.sidebar.isHidden())
     def _on_page_changed(self, page: str) -> None:
         self._current_page = page
         self.nav_buttons[page].setChecked(True)
@@ -744,3 +758,4 @@ class MainWindow(QWidget):
             details,
             [("最小二乘近似解", x_ls)],
         )
+

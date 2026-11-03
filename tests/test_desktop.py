@@ -73,8 +73,8 @@ class TestMatrixTableWidget:
         from matrix_calculator.desktop.matrix_input import MatrixTableWidget
 
         widget = MatrixTableWidget("矩阵 A", rows=2, cols=2)
-        widget.table.setItem(0, 0, QTableWidgetItem("1"))
-        widget.table.setItem(1, 1, QTableWidgetItem("2"))
+        widget.set_cell(0, 0, "1")
+        widget.set_cell(1, 1, "2")
         with pytest.raises(MatrixOperationError, match="第 1 行第 2 列为空"):
             widget.get_matrix()
 
@@ -82,7 +82,7 @@ class TestMatrixTableWidget:
         from matrix_calculator.desktop.matrix_input import MatrixTableWidget
 
         widget = MatrixTableWidget("矩阵 A")
-        widget.table.setItem(0, 0, QTableWidgetItem("abc"))
+        widget.set_cell(0, 0, "abc")
         with pytest.raises(MatrixOperationError, match="不是数字"):
             widget.get_matrix()
 
@@ -295,8 +295,17 @@ class TestExport:
     def test_non_numeric_shows_error(self, window):
         _page(window, "双矩阵运算")
         _op(window, "A + B")
-        window.input_a.table.setItem(0, 0, QTableWidgetItem("oops"))
-        window.input_b.table.setItem(0, 0, QTableWidgetItem("1"))
+        window.input_a.set_cell(0, 0, "oops")
+        window.input_b.set_cell(0, 0, "1")
         window.compute_button.click()
         assert "不是数字" in window.error_label.text()
 
+
+
+class TestSidebarToggle:
+    def test_sidebar_collapses_and_expands(self, window):
+        assert not window.sidebar.isHidden()
+        window.sidebar_toggle.click()
+        assert window.sidebar.isHidden()
+        window.sidebar_toggle.click()
+        assert not window.sidebar.isHidden()
