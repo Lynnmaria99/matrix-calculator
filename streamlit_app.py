@@ -11,8 +11,10 @@
 
 from __future__ import annotations
 
+import io
 import re
 import sys
+from itertools import count
 from pathlib import Path
 
 import numpy as np
@@ -170,7 +172,30 @@ APP_THEME_CSS = """
     color: var(--mx-blue) !important;
   }
 
-  .stButton button[kind="primary"] {
+  .stButton button:not([kind="primary"]),
+  .stDownloadButton button:not([kind="primary"]),
+  .stPopover button {
+    background: rgba(255, 255, 255, 0.62) !important;
+    border: 1px solid rgba(255, 255, 255, 0.82) !important;
+    border-radius: 999px !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.78),
+      0 7px 18px rgba(15, 23, 42, 0.06);
+    color: var(--mx-text) !important;
+    backdrop-filter: blur(18px) saturate(160%);
+    -webkit-backdrop-filter: blur(18px) saturate(160%);
+  }
+
+  .stButton button:not([kind="primary"]):hover,
+  .stDownloadButton button:not([kind="primary"]):hover,
+  .stPopover button:hover {
+    border-color: rgba(0, 113, 227, 0.45) !important;
+    color: var(--mx-blue) !important;
+    transform: translateY(-1px);
+  }
+
+  .stButton button[kind="primary"],
+  .stDownloadButton button[kind="primary"] {
     background: linear-gradient(180deg, #2b9aff 0%, #0071e3 100%) !important;
     border: 1px solid rgba(255, 255, 255, 0.28) !important;
     border-radius: 999px !important;
@@ -196,6 +221,7 @@ APP_THEME_CSS = """
   }
 
   [data-testid="stText"],
+  [data-testid="stCode"],
   pre {
     background: rgba(255, 255, 255, 0.48);
     border: 1px solid rgba(255, 255, 255, 0.64);
@@ -841,19 +867,134 @@ def matrix_input(
     )
 
     if errors:
-        st.error("矩阵中有不合法的输入：" + "；".join(errors[:3]))
+        st.error(
+            "矩阵中有不合法的输入："
+            + "；".join(errors[:3])
+            + "。支持整数、小数、科学计数法（如 1e-3）和简单分数（如 1/2）。"
+        )
         st.stop()
     return matrix
 
 
+RESULT_SERIAL = count(1)
+
+
+def matrix_to_csv_text(value) -> str:
+    """把矩阵转换成 CSV 文本，便于粘贴到 Excel 或数据分析工具中。"""
+    matrix = np.atleast_2d(np.asarray(value))
+    buffer = io.StringIO()
+    fmt = "%s" if np.iscomplexobj(matrix) else "%.12g"
+    np.savetxt(buffer, matrix, delimiter=",", fmt=fmt)
+    return buffer.getvalue()
+
+
+def matrix_to_numpy_text(value) -> str:
+    """把矩阵转换成可直接粘贴到 Python/Notebook 的 np.array 文本。"""
+    matrix = np.atleast_2d(np.asarray(value))
+    array_text = np.array2string(
+        matrix,
+        separator=", ",
+        threshold=10_000,
+        suppress_small=True,
+        precision=10,
+    )
+    return f"np.array({array_text})\n"
+
+
 def show_text_matrix(label: str, value) -> None:
+    """展示教材风格矩阵；st.code 自带复制按钮，另提供 TXT/CSV/NumPy 导出。"""
+    result_id = next(RESULT_SERIAL)
+    matrix_text = format_matrix(value)
+    csv_text = matrix_to_csv_text(value)
+    numpy_text = matrix_to_numpy_text(value)
+
     with st.container(border=True):
-        st.markdown(f"**{label}**")
-        st.text(format_matrix(value))
+        title_col, export_col = st.columns([3, 1], vertical_alignment="center")
+        title_col.markdown(f"**{label}**")
+        with export_col:
+            with st.popover("导出", width="stretch"):
+                st.download_button(
+                    "下载 TXT",
+                    data=matrix_text,
+                    file_name=f"matrix-{result_id}.txt",
+                    mime="text/plain",
+                    key=f"download-txt-{result_id}",
+                    width="stretch",
+                )
+                st.download_button(
+                    "下载 CSV",
+                    data=csv_text,
+                    file_name=f"matrix-{result_id}.csv",
+                    mime="text/csv",
+                    key=f"download-csv-{result_id}",
+                    width="stretch",
+                )
+                st.download_button(
+                    "NumPy 文本",
+                    data=numpy_text,
+                    file_name=f"matrix-{result_id}.py",
+                    mime="text/x-python",
+                    key=f"download-numpy-{result_id}",
+                    width="stretch",
+                )
+        st.code(matrix_text, language="text", wrap_lines=True)
 
 
 def show_error(exc: Exception) -> None:
     st.error(f"输入或计算有误：{exc}")
+
+
+def shape_text(matrix: np.ndarray) -> str:
+    return f"{matrix.shape[0]} × {matrix.shape[1]}"
+
+
+def explain_binary_error(
+    exc: Exception,
+    operation_code: str,
+    mat_a: np.ndarray,
+    mat_b: np.ndarray,
+) -> str:
+    """把核心库的通用异常翻译成网页上可操作的维度提示。"""
+    if operation_code == "multiply" and mat_a.shape[1] != mat_b.shape[0]:
+        return (
+            f"A × B 要求 A 的列数等于 B 的行数。当前 A 是 {shape_text(mat_a)}，"
+            f"有 {mat_a.shape[1]} 列；B 是 {shape_text(mat_b)}，有 {mat_b.shape[0]} 行。"
+            "请调整矩阵维度，或改选 A + B / A ⊙ B。"
+        )
+
+    elementwise_operations = {
+        "add": ("A + B", "相加"),
+        "subtract": ("A − B", "相减"),
+        "hadamard_multiply": ("A ⊙ B", "对应元素相乘"),
+        "hadamard_divide": ("A ⊘ B", "对应元素相除"),
+    }
+    if operation_code in elementwise_operations and mat_a.shape != mat_b.shape:
+        symbol, action = elementwise_operations[operation_code]
+        return (
+            f"{symbol} 要求两个矩阵形状完全相同，才能逐元素{action}。"
+            f"当前 A 是 {shape_text(mat_a)}，B 是 {shape_text(mat_b)}。"
+            "请用 +行 / +列 调整成相同形状。"
+        )
+
+    if operation_code == "hadamard_divide" and mat_b.size and np.any(mat_b == 0):
+        return "A ⊘ B 是对应元素相除；B 中包含 0，会产生无穷大，因此已取消计算。请把 0 改成非零数。"
+
+    return str(exc)
+
+
+def explain_unary_error(exc: Exception, operation_code: str, mat: np.ndarray) -> str:
+    square_only = {"determinant", "inverse", "eigendecomposition"}
+    labels = {
+        "determinant": "det(A)",
+        "inverse": "A⁻¹",
+        "eigendecomposition": "特征分解",
+    }
+    if operation_code in square_only and mat.shape[0] != mat.shape[1]:
+        return (
+            f"{labels[operation_code]} 只能用于方阵。当前矩阵是 {shape_text(mat)}，"
+            "请调整成相同行数和列数；非方阵可以选择 SVD 或 Aᵀ。"
+        )
+    return str(exc)
 
 
 def _matrix_signature(matrix: np.ndarray) -> tuple[tuple[int, int], tuple[float, ...]]:
@@ -909,6 +1050,118 @@ BINARY_RESULT_ANALYSIS_LABELS = {
     "svd": "SVD",
     "transpose": "Cᵀ",
 }
+
+
+BINARY_EXAMPLES = [
+    {
+        "label": "I＋交换矩阵",
+        "operation": "add",
+        "a": np.eye(2),
+        "b": np.array([[0, 1], [1, 0]], dtype=float),
+    },
+    {
+        "label": "2×3 × 3×2",
+        "operation": "multiply",
+        "a": np.array([[1, 2, 3], [4, 5, 6]], dtype=float),
+        "b": np.array([[7, 8], [9, 10], [11, 12]], dtype=float),
+    },
+    {
+        "label": "非方阵相加",
+        "operation": "add",
+        "a": np.array([[1, 0, 0], [0, 1, 0]], dtype=float),
+        "b": np.array([[0, 1, 0], [1, 0, 0]], dtype=float),
+    },
+]
+
+UNARY_EXAMPLES = [
+    {
+        "label": "旋转矩阵",
+        "operation": "determinant",
+        "matrix": np.array([[0, -1], [1, 0]], dtype=float),
+    },
+    {
+        "label": "奇异矩阵",
+        "operation": "determinant",
+        "matrix": np.array([[1, 1], [1, 1]], dtype=float),
+    },
+    {
+        "label": "可逆三角阵",
+        "operation": "inverse",
+        "matrix": np.array([[2, 1], [0, 3]], dtype=float),
+    },
+    {
+        "label": "3×3 可逆",
+        "operation": "determinant",
+        "matrix": np.array([[2, 1, 0], [1, 3, 2], [0, 2, 4]], dtype=float),
+    },
+]
+
+SOLVE_EXAMPLES = [
+    {
+        "label": "唯一解",
+        "matrix": np.array([[1, 1, 3], [2, -1, 0]], dtype=float),
+    },
+    {
+        "label": "无穷多解",
+        "matrix": np.array([[1, 1, 1], [2, 2, 2]], dtype=float),
+    },
+    {
+        "label": "无解",
+        "matrix": np.array([[1, 1, 1], [1, 1, 2]], dtype=float),
+    },
+]
+
+QUADRATIC_EXAMPLES = [
+    {"label": "正定", "matrix": np.eye(2)},
+    {"label": "负定", "matrix": -np.eye(2)},
+    {"label": "不定", "matrix": np.diag([1.0, -1.0])},
+    {"label": "半正定", "matrix": np.array([[1, 1], [1, 1]], dtype=float)},
+]
+
+
+def _set_matrix_example(key: str, matrix: np.ndarray) -> None:
+    array = np.asarray(matrix, dtype=float)
+    dims_key, raw_key = _state_keys(key)
+    st.session_state[dims_key] = [int(array.shape[0]), int(array.shape[1])]
+    st.session_state[raw_key] = _raw_from_matrix(array)
+    st.session_state.pop(_component_key(key), None)
+
+
+def render_example_buttons(examples: list[dict], apply_example, prefix: str) -> None:
+    with st.container(border=True):
+        st.caption("示例：点击即可载入，然后再点页面下方的计算按钮。")
+        columns = st.columns(min(4, len(examples)), wrap=True)
+        for index, (column, example) in enumerate(zip(columns, examples)):
+            with column:
+                if st.button(
+                    example["label"],
+                    key=f"{prefix}-example-{index}",
+                    width="stretch",
+                    wrap=True,
+                ):
+                    apply_example(example)
+                    st.rerun()
+
+
+def _apply_binary_example(example: dict) -> None:
+    st.session_state["binary_operation"] = example["operation"]
+    _set_matrix_example("binary-a", example["a"])
+    _set_matrix_example("binary-b", example["b"])
+    st.session_state.pop(BINARY_RESULT_KEY, None)
+    st.session_state.pop(BINARY_RESULT_ANALYSIS_KEY, None)
+
+
+def _apply_unary_example(example: dict) -> None:
+    st.session_state["unary_operation"] = example["operation"]
+    _set_matrix_example("unary-a", example["matrix"])
+
+
+def _apply_solve_example(example: dict) -> None:
+    _set_matrix_example("solve-ab", example["matrix"])
+
+
+def _apply_quadratic_example(example: dict) -> None:
+    _set_matrix_example("quadratic-a", example["matrix"])
 
 
 def _binary_input_signature(
@@ -999,6 +1252,8 @@ def _render_binary_result(
 def page_binary() -> None:
     st.header("双矩阵运算")
 
+    render_example_buttons(BINARY_EXAMPLES, _apply_binary_example, "binary")
+
     with st.container(border=True):
         operation_code = st.segmented_control(
             "选择双矩阵运算",
@@ -1031,7 +1286,8 @@ def page_binary() -> None:
             }
         except (MatrixOperationError, np.linalg.LinAlgError) as exc:
             st.session_state.pop(BINARY_RESULT_KEY, None)
-            show_error(exc)
+            message = explain_binary_error(exc, operation_code, mat_a, mat_b)
+            show_error(MatrixOperationError(message))
 
     cached_result = st.session_state.get(BINARY_RESULT_KEY)
     if cached_result is not None:
@@ -1057,6 +1313,8 @@ UNARY_OPERATIONS = {
 def page_unary() -> None:
     st.header("单矩阵运算")
 
+    render_example_buttons(UNARY_EXAMPLES, _apply_unary_example, "unary")
+
     with st.container(border=True):
         operation_code = st.segmented_control(
             "选择单矩阵运算",
@@ -1079,7 +1337,8 @@ def page_unary() -> None:
         try:
             render_matrix_analysis(mat, operation_code, symbol="A")
         except (MatrixOperationError, np.linalg.LinAlgError) as exc:
-            show_error(exc)
+            message = explain_unary_error(exc, operation_code, mat)
+            show_error(MatrixOperationError(message))
 
 
 # ==================== 页面：线性方程组 ====================
@@ -1087,6 +1346,8 @@ def page_unary() -> None:
 
 def page_solve() -> None:
     st.header("解线性方程组 Ax = b")
+
+    render_example_buttons(SOLVE_EXAMPLES, _apply_solve_example, "solve")
 
     with st.container(border=True):
         st.caption("输入增广矩阵 [A | b]：最后一列自动作为常数项 b，可通过 +列 增加未知数。")
@@ -1139,6 +1400,8 @@ def page_solve() -> None:
 
 def page_quadratic() -> None:
     st.header("二次型 f = xᵀAx")
+
+    render_example_buttons(QUADRATIC_EXAMPLES, _apply_quadratic_example, "quadratic")
 
     with st.container(border=True):
         st.caption("输入方阵阶数可通过 −阶 / +阶 调整；默认是 2 阶单位矩阵。")

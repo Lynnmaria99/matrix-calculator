@@ -83,6 +83,7 @@ print(kind)  # 半正定
 ## 运行测试
 
 ```bash
+python -m pip install -e ".[dev,web]"
 python -m pytest
 ```
 
