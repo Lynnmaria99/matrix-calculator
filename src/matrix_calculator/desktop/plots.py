@@ -19,6 +19,12 @@ def _circle_points(n: int = 144) -> np.ndarray:
 def _style_axes(ax, title: str) -> None:
     ax.axhline(0, color="#999999", linewidth=0.8)
     ax.axvline(0, color="#999999", linewidth=0.8)
+    for spine in ax.spines.values():
+        spine.set_visible(True)
+        spine.set_color("#cccccc")
+    ax.tick_params(colors="#6e6e73", labelsize=9)
+    ax.set_xlabel(r"$x_1$", fontsize=10)
+    ax.set_ylabel(r"$x_2$", fontsize=10)
     ax.set_aspect("equal", adjustable="datalim")
     ax.set_title(title, fontsize=11)
     ax.grid(True, linestyle="--", alpha=0.4)
@@ -147,6 +153,9 @@ def plot_quadratic_contours(ax, result) -> None:
         ax.plot([-3 * v[0], 3 * v[0]], [-3 * v[1], 3 * v[1]],
                 color="#ff9500", lw=1.8, label="主轴" if j == 0 else None)
     ax.set_title(f"二次型等高线：{result['kind']}", fontsize=11)
+    ax.set_xlabel(r"$x_1$", fontsize=10)
+    ax.set_ylabel(r"$x_2$", fontsize=10)
+    ax.tick_params(colors="#6e6e73", labelsize=9)
     ax.set_aspect("equal", adjustable="datalim")
     ax.legend(loc="upper right", fontsize=9)
 
@@ -168,3 +177,4 @@ class PlotCanvas(FigureCanvasQTAgg):
         self.figure = Figure(figsize=(5.8, 3.4), dpi=100)
         super().__init__(self.figure)
         self.setMinimumHeight(250)
+
