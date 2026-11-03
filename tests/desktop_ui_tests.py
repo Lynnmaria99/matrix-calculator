@@ -352,3 +352,57 @@ class TestScrollLayout:
 
 
 
+
+
+class TestPlots:
+    def test_svd_2x2_geometry(self, window):
+        _page(window, "单矩阵运算")
+        _op(window, "SVD")
+        _fill(window.input_a, [[3, 0], [0, 1]])
+        window.compute_button.click()
+        assert not window.plot_section.isHidden()
+        assert window._plot_canvas is not None
+        assert window._plot_canvas.figure.axes
+
+    def test_svd_3x3_bar(self, window):
+        _page(window, "单矩阵运算")
+        _op(window, "SVD")
+        _fill(window.input_a, [[3, 0, 0], [0, 1, 0], [0, 0, 2]])
+        window.compute_button.click()
+        assert not window.plot_section.isHidden()
+
+    def test_eig_3x3_no_plot(self, window):
+        _page(window, "单矩阵运算")
+        _op(window, "特征分解")
+        _fill(window.input_a, np.eye(3))
+        window.compute_button.click()
+        assert window.plot_section.isHidden()
+
+    def test_solve_lines_unique(self, window):
+        _page(window, "解线性方程组")
+        _fill(window.input_a, [[2, 1], [1, 3]])
+        _fill(window.input_b, [[4], [5]])
+        window.compute_button.click()
+        assert not window.plot_section.isHidden()
+
+    def test_quadratic_contours(self, window):
+        _page(window, "二次型分析")
+        _fill(window.input_a, [[2, 1], [1, 2]])
+        window.compute_button.click()
+        assert not window.plot_section.isHidden()
+
+    def test_binary_2x2_transform(self, window):
+        _page(window, "双矩阵运算")
+        _op(window, "A + B")
+        _fill(window.input_a, [[2, 0], [0, 3]])
+        _fill(window.input_b, [[1, 0], [0, 1]])
+        window.compute_button.click()
+        assert not window.plot_section.isHidden()
+
+    def test_non_square_binary_no_plot(self, window):
+        _page(window, "双矩阵运算")
+        _op(window, "A + B")
+        _fill(window.input_a, [[1, 0, 0], [0, 1, 0]])
+        _fill(window.input_b, [[0, 1, 0], [1, 0, 0]])
+        window.compute_button.click()
+        assert window.plot_section.isHidden()

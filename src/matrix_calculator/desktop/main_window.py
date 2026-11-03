@@ -189,6 +189,7 @@ class MainWindow(QWidget):
         self._analysis_matrix: np.ndarray | None = None
         self._analysis_active: str | None = None
         self._export_items: list[tuple[str, np.ndarray]] = []
+        self._plot_canvas = None
         self._build_ui()
         self._on_page_changed("双矩阵运算")
 
@@ -345,6 +346,15 @@ class MainWindow(QWidget):
         self.metrics_label.setObjectName("Caption")
         self.metrics_label.setWordWrap(True)
         self.metrics_label.setHidden(True)
+
+        self.plot_section = QWidget()
+        plot_layout = QVBoxLayout(self.plot_section)
+        plot_layout.setContentsMargins(0, 0, 0, 0)
+        plot_layout.setSpacing(6)
+        self.plot_title = QLabel("图示")
+        self.plot_title.setObjectName("H2")
+        plot_layout.addWidget(self.plot_title)
+        self.plot_section.setHidden(True)
 
         self.analysis_row = QFrame()
         self.analysis_row.setObjectName("Segment")
@@ -524,6 +534,7 @@ class MainWindow(QWidget):
         self.result_label.setText("请在上方选择运算并点击“计算”。")
         self.metrics_label.setHidden(True)
         self.metrics_label.setText("")
+        self.plot_section.setHidden(True)
         self.analysis_row.setHidden(True)
         self.analysis_label.setHidden(True)
         self.analysis_label.setText("")
@@ -550,29 +561,74 @@ class MainWindow(QWidget):
             a = self.input_a.get_matrix()
             if kind == "binary":
                 b = self.input_b.get_matrix()
-                result = OPERATIONS[self._selected_ops[self._current_page]].func(a, b)
-                details = self._render_binary_result(np.asarray(result))
+                result = np.asarray(
+                    OPERATIONS[self._selected_ops[self._current_page]].func(a, b)
+                )
+                details = self._render_binary_result(result)
+                if result.shape == (2, 2):
+                    self._update_plot("linear_transform", result)
             elif kind == "quadratic":
-                result_text, details, items = self._format_quadratic(analyze_quadratic(a))
+                result = analyze_quadratic(a)
+                result_text, details, items = self._format_quadratic(result)
                 self._show_result("二次型分析结果", result_text, items)
+                if result["matrix"].shape == (2, 2):
+                    self._update_plot("quadratic_contours", result)
             elif kind == "solve":
                 b = self.input_b.get_matrix()
                 if b.shape[1] != 1:
                     raise MatrixOperationError("向量 b 只能有一列，请用“− 列”删除多余列")
-                result_text, details, items = self._format_solve(
-                    *solve_linear(a, b.reshape(-1))
-                )
+                status, info = solve_linear(a, b.reshape(-1))
+                result_text, details, items = self._format_solve(status, info)
                 self._show_result("方程组求解结果", result_text, items)
+                if a.shape[1] == 2:
+                    self._update_plot("solve_lines", a, b, status, info)
             else:
                 name = self._selected_ops[self._current_page]
-                result_text, details, items = self._format_unary(
-                    name, OPERATIONS[name].func(a)
-                )
+                result = OPERATIONS[name].func(a)
+                result_text, details, items = self._format_unary(name, result)
                 self._show_result(f"{name} 计算结果", result_text, items)
+                if name == "特征分解" and a.shape == (2, 2):
+                    self._update_plot(
+                        "eig_geometry", a, np.asarray(result[0]), np.asarray(result[1])
+                    )
+                elif name == "SVD":
+                    u, s, vt = (np.asarray(part) for part in result)
+                    if u.shape == (2, 2):
+                        self._update_plot("svd_geometry", u, s, vt)
+                    else:
+                        self._update_plot("svd_bar", a)
         except (MatrixOperationError, np.linalg.LinAlgError, ValueError) as exc:
             self._show_error(str(exc))
             return
         self.details_label.setText(details)
+
+    def _ensure_plot_canvas(self):
+        if self._plot_canvas is None:
+            from .plots import PlotCanvas
+
+            self._plot_canvas = PlotCanvas()
+            self.plot_section.layout().addWidget(self._plot_canvas)
+        return self._plot_canvas
+
+    def _update_plot(self, name: str, *args) -> None:
+        try:
+            from . import plots
+
+            builder = plots.BUILDERS[name]
+            canvas = self._ensure_plot_canvas()
+        except ImportError:
+            self.plot_section.setHidden(True)
+            return
+        canvas.figure.clear()
+        ax = canvas.figure.add_subplot(111)
+        try:
+            builder(ax, *args)
+            canvas.figure.tight_layout()
+            canvas.draw()
+        except Exception:
+            self.plot_section.setHidden(True)
+            return
+        self.plot_section.setHidden(False)
 
     def _show_result(
         self, title: str, text: str, items: list[tuple[str, np.ndarray]]
@@ -782,6 +838,7 @@ class MainWindow(QWidget):
             details,
             [("最小二乘近似解", x_ls)],
         )
+
 
 
 
