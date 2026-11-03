@@ -27,9 +27,13 @@ notebook = [
 web = [
     "streamlit>=1.57",
 ]
+desktop = [
+    "PySide6>=6.6",
+]
 
 [project.scripts]
 matrix-calculator = "matrix_calculator.cli:main"
+matrix-calculator-desktop = "matrix_calculator.desktop.app:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
