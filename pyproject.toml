@@ -28,7 +28,10 @@ web = [
     "streamlit>=1.57",
 ]
 desktop = [
-    "PySide6>=6.6",
+    # PySide6/shiboken6 6.12.0 在 Linux + Python 3.11 offscreen 下会因 GC
+    # 回收 shiboken 托管对象而 SIGSEGV（详见 tests/desktop_ui_tests.py 与
+    # desktop/app.py 的预加载说明）；6.12 后续版本验证通过前先锁定 6.11.x。
+    "PySide6>=6.6,<6.12",
 ]
 
 [project.scripts]
