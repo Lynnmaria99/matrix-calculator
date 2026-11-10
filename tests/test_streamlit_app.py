@@ -28,6 +28,11 @@ def _click(app, label):
     return matches[-1].click().run()
 
 
+def _business_segments(app):
+    """返回业务运算用的分段控件，排除全局外观切换器（mx_theme_label）。"""
+    return [w for w in app.segmented_control if w.key != "mx_theme_label"]
+
+
 def _load_page(page_name):
     app = _start_page(page_name)
     _click(app, PAGES[page_name])
@@ -57,7 +62,7 @@ def test_streamlit_binary_operations_are_visible_segments():
     app = _start_page("双矩阵运算")
 
     assert not app.selectbox
-    assert len(app.segmented_control) == 1
+    assert len(_business_segments(app)) == 1
     assert app.segmented_control[0].value == "add"
 
     app.segmented_control[0].set_value("multiply").run()
@@ -71,7 +76,7 @@ def test_streamlit_unary_operations_are_visible_segments():
     app = _start_page("单矩阵运算")
 
     assert not app.selectbox
-    assert len(app.segmented_control) == 1
+    assert len(_business_segments(app)) == 1
     assert app.segmented_control[0].value == "determinant"
 
     app.segmented_control[0].set_value("transpose").run()
@@ -148,7 +153,7 @@ def test_streamlit_binary_singular_result_reports_missing_inverse():
 def test_streamlit_binary_result_followup_svd_persists_after_rerun():
     app = _load_page("双矩阵运算")
 
-    assert len(app.segmented_control) == 2
+    assert len(_business_segments(app)) == 2
     app.segmented_control[1].set_value("svd").run()
 
     assert not app.exception

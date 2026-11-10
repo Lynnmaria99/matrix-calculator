@@ -109,9 +109,9 @@ def plot_linear_transform(a, vectors=None, ax=None):
                     xytext=(4, -10), color="#d62728", fontsize=9)
 
     ax.set_aspect("equal", adjustable="datalim")
-    ax.set_title(r"二维线性变换：$x \rightarrow Ax$")
-    ax.set_xlabel(r"$x_1$")
-    ax.set_ylabel(r"$x_2$")
+    ax.set_title("二维线性变换：x → Ax")
+    ax.set_xlabel("x1")
+    ax.set_ylabel("x2")
     ax.grid(True, linestyle="--", alpha=0.4)
     ax.legend(loc="upper left")
     return ax
@@ -139,7 +139,7 @@ def plot_singular_values(a, ax=None):
 
     ax.set_xticks(indices)
     ax.set_xlabel("奇异值序号")
-    ax.set_ylabel(r"奇异值 $\sigma_i$")
-    ax.set_title(r"奇异值分解 SVD：$A = U \cdot diag(\sigma) \cdot V^{T}$")
+    ax.set_ylabel("奇异值 σ_i")
+    ax.set_title("奇异值分解 SVD：A = U · diag(σ) · V^T")
     ax.grid(True, axis="y", linestyle="--", alpha=0.4)
     return ax, s

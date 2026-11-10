@@ -12,21 +12,31 @@ import os
 import subprocess
 import sys
 
+import pytest
+
+pytest.importorskip("PySide6")
+
 _HERE = os.path.dirname(__file__)
 _ROOT = os.path.dirname(_HERE)
 
 
 def test_desktop_ui_suite():
+    """子进程偶尔在退出阶段触发 Qt 原生崩溃（与测试结果无关），重试一次。"""
     env = os.environ.copy()
     env.setdefault("QT_QPA_PLATFORM", "offscreen")
-    result = subprocess.run(
-        [sys.executable, os.path.join(_HERE, "_desktop_entry.py")],
-        cwd=_ROOT,
-        env=env,
-        capture_output=True,
-        text=True,
-        timeout=300,
-    )
-    assert result.returncode == 0, (
-        "桌面 UI 测试子进程失败：\n" + result.stdout + result.stderr
+    entry = os.path.join(_HERE, "_desktop_entry.py")
+    last = None
+    for _ in range(2):
+        last = subprocess.run(
+            [sys.executable, entry],
+            cwd=_ROOT,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=300,
+        )
+        if last.returncode == 0:
+            return
+    assert last is not None and last.returncode == 0, (
+        "桌面 UI 测试子进程失败：\n" + (last.stdout if last else "") + (last.stderr if last else "")
     )

@@ -23,6 +23,13 @@ from .linalg_topics import (
     solve_linear,
 )
 from .formatting import format_matrix, print_matrix, show_two_results, signed_polynomial
+from .calculus import (
+    ExpressionError,
+    parse_expression,
+    derivative_value,
+    simpson_integral,
+    riemann_midpoint,
+)
 
 __all__ = [
     "EPS",
@@ -47,4 +54,9 @@ __all__ = [
     "print_matrix",
     "show_two_results",
     "signed_polynomial",
+    "ExpressionError",
+    "parse_expression",
+    "derivative_value",
+    "simpson_integral",
+    "riemann_midpoint",
 ]

@@ -23,8 +23,8 @@ def _style_axes(ax, title: str) -> None:
         spine.set_visible(True)
         spine.set_color("#cccccc")
     ax.tick_params(colors="#6e6e73", labelsize=9)
-    ax.set_xlabel(r"$x_1$", fontsize=10)
-    ax.set_ylabel(r"$x_2$", fontsize=10)
+    ax.set_xlabel("x1", fontsize=10)
+    ax.set_ylabel("x2", fontsize=10)
     ax.set_aspect("equal", adjustable="datalim")
     ax.set_title(title, fontsize=11)
     ax.grid(True, linestyle="--", alpha=0.4)
@@ -48,7 +48,7 @@ def plot_eig_geometry(ax, a, values, vectors) -> None:
     ellipse = circle @ matrix.T
     ax.plot(circle[:, 0], circle[:, 1], color="#1f77b4", lw=1.6, label="单位圆")
     ax.plot(ellipse[:, 0], ellipse[:, 1], color="#d62728", lw=1.8,
-            label=r"$A\circ$单位圆")
+            label="A·单位圆")
     values = np.asarray(values)
     vectors = np.asarray(vectors)
     for j in range(2):
@@ -63,12 +63,12 @@ def plot_eig_geometry(ax, a, values, vectors) -> None:
         ax.quiver(0, 0, unit[0], unit[1], angles="xy", scale_units="xy",
                   scale=1, color="#2ca02c", width=0.006)
         ax.annotate(
-            rf"$\lambda_{j + 1}={np.real(values[j]):.3g}$",
+            f"λ{j + 1}={np.real(values[j]):.3g}",
             (unit[0] * 1.18, unit[1] * 1.18),
             fontsize=9,
             color="#2ca02c",
         )
-    _style_axes(ax, "特征方向：单位圆 → A∘单位圆")
+    _style_axes(ax, "特征方向：单位圆 → A·单位圆")
 
 
 def plot_svd_geometry(ax, u, s, vt) -> None:
@@ -83,13 +83,13 @@ def plot_svd_geometry(ax, u, s, vt) -> None:
     ellipse = circle @ (u @ np.diag(s) @ vt).T
     ax.plot(circle[:, 0], circle[:, 1], color="#1f77b4", lw=1.6, label="单位圆")
     ax.plot(ellipse[:, 0], ellipse[:, 1], color="#d62728", lw=1.8,
-            label=r"$A\circ$单位圆")
+            label="A·单位圆")
     for i in range(2):
         vec = u[:, i] * s[i]
         ax.quiver(0, 0, vec[0], vec[1], angles="xy", scale_units="xy",
                   scale=1, color="#ff9500", width=0.006)
         ax.annotate(
-            rf"$\sigma_{i + 1}={s[i]:.3g}$",
+            f"σ{i + 1}={s[i]:.3g}",
             (vec[0] * 1.1, vec[1] * 1.1),
             fontsize=9,
             color="#ff9500",
@@ -131,8 +131,8 @@ def plot_solve_lines(ax, a, b, status, info) -> None:
     ax.axhline(0, color="#999999", linewidth=0.8)
     ax.axvline(0, color="#999999", linewidth=0.8)
     ax.set_aspect("equal", adjustable="datalim")
-    ax.set_xlabel(r"$x_1$")
-    ax.set_ylabel(r"$x_2$")
+    ax.set_xlabel("x1")
+    ax.set_ylabel("x2")
     ax.grid(True, linestyle="--", alpha=0.4)
     ax.legend(loc="best", fontsize=9)
 
@@ -153,8 +153,8 @@ def plot_quadratic_contours(ax, result) -> None:
         ax.plot([-3 * v[0], 3 * v[0]], [-3 * v[1], 3 * v[1]],
                 color="#ff9500", lw=1.8, label="主轴" if j == 0 else None)
     ax.set_title(f"二次型等高线：{result['kind']}", fontsize=11)
-    ax.set_xlabel(r"$x_1$", fontsize=10)
-    ax.set_ylabel(r"$x_2$", fontsize=10)
+    ax.set_xlabel("x1", fontsize=10)
+    ax.set_ylabel("x2", fontsize=10)
     ax.tick_params(colors="#6e6e73", labelsize=9)
     ax.set_aspect("equal", adjustable="datalim")
     ax.legend(loc="upper right", fontsize=9)
@@ -177,4 +177,8 @@ class PlotCanvas(FigureCanvasQTAgg):
         self.figure = Figure(figsize=(5.8, 3.4), dpi=100)
         super().__init__(self.figure)
         self.setMinimumHeight(250)
+
+    def adjust_layout(self) -> None:
+        """Use fixed margins; tight_layout can crash under Qt/Python 3.13."""
+        self.figure.subplots_adjust(left=0.10, right=0.98, bottom=0.14, top=0.90)
 

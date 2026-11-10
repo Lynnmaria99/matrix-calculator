@@ -32,3 +32,10 @@ venv/
 foundation-*.png
 
 crash_log*.txt
+
+# Python 构建产物
+*.egg-info/
+
+# 浏览器截图审计脚本与截图（本地脚手架）
+shots/
+
