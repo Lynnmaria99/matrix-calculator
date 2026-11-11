@@ -21,7 +21,8 @@ src/matrix_calculator/
 ├── operations.py      # 矩阵基础运算（纯计算，不做 input/print）
 ├── linalg_topics.py   # 方程组、零空间、二次型判定等专题算法
 ├── calculus.py        # 安全表达式解析、数值导数与数值积分
-├── desktop/           # PySide6 桌面界面与 Matplotlib 嵌入图
+├── desktop/           # PySide6 桌面界面；微积分面板独立为 calculus_panel.py
+├── web/               # Streamlit 主题、矩阵输入、结果组件、页面与主导航
 ├── formatting.py      # 教材风格矩阵格式化
 ├── io_utils.py        # 命令行输入工具
 ├── cli.py             # 命令行菜单
@@ -31,7 +32,7 @@ src/matrix_calculator/
 
 src/matrix_calculator.py # 兼容旧运行方式的薄入口
 tests/                   # pytest 测试
-streamlit_app.py        # Streamlit 网页界面（维护状态）
+streamlit_app.py        # Streamlit 薄启动入口（网页实现位于包内 web/）
 plans/PROJECT_PLAN.md   # 阶段路线、验收条件与收尾记录
 ```
 

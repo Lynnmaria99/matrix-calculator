@@ -12,30 +12,20 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QGuiApplication
 from PySide6.QtWidgets import (
     QButtonGroup,
-    QDoubleSpinBox,
     QFileDialog,
     QFrame,
     QGraphicsDropShadowEffect,
     QGroupBox,
     QHBoxLayout,
     QLabel,
-    QLineEdit,
     QMenu,
     QPushButton,
     QScrollArea,
-    QSlider,
     QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
 
-from ..calculus import (
-    ExpressionError,
-    derivative_value,
-    parse_expression,
-    riemann_midpoint,
-    simpson_integral,
-)
 from ..formatting import (
     format_matrix,
     format_scalar,
@@ -56,6 +46,11 @@ from ..operations import (
     singular_value_decompose,
     subtract_matrices,
     transpose,
+)
+from .calculus_panel import (
+    build_calculus_panel,
+    render_calculus_plots,
+    run_calculus,
 )
 from .matrix_input import MatrixTableWidget
 
@@ -359,83 +354,8 @@ class MainWindow(QWidget):
         return scroll
 
     def _build_calc_panel(self) -> QWidget:
-        """微积分页：表达式、切线滑块、黎曼和滑块与两张图。"""
-        from .plots import PlotCanvas
+        return build_calculus_panel(self)
 
-        panel = QWidget()
-        layout = QVBoxLayout(panel)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(10)
-
-        expr_row = QHBoxLayout()
-        expr_row.addWidget(QLabel("f(x) ="))
-        self.calc_expr = QLineEdit()
-        self.calc_expr.setText("sin(x)")
-        self.calc_expr.setPlaceholderText("输入表达式，例如 x^2 * sin(x)（支持 ^、sin、cos、exp、log、sqrt、pi、e）")
-        expr_row.addWidget(self.calc_expr, stretch=1)
-        layout.addLayout(expr_row)
-
-        range_row = QHBoxLayout()
-        for label_text, attr, default in (
-            ("图示范围从", "calc_xmin", -5.0),
-            ("到", "calc_xmax", 5.0),
-            ("积分下限 a", "calc_a", 0.0),
-            ("上限 b", "calc_b", 3.0),
-        ):
-            range_row.addWidget(QLabel(label_text))
-            spin = QDoubleSpinBox()
-            spin.setRange(-100.0, 100.0)
-            spin.setSingleStep(0.5)
-            spin.setValue(default)
-            spin.setDecimals(1)
-            setattr(self, attr, spin)
-            range_row.addWidget(spin)
-        range_row.addStretch(1)
-        layout.addLayout(range_row)
-
-        self.calc_tangent_label = QLabel("")
-        self.calc_tangent_label.setObjectName("Caption")
-        self.calc_tangent_label.setWordWrap(True)
-        self.calc_func_canvas = PlotCanvas()
-        layout.addWidget(self.calc_tangent_label)
-        layout.addWidget(self.calc_func_canvas)
-
-        n_row = QHBoxLayout()
-        n_row.addWidget(QLabel("分割数 n"))
-        self.calc_n = QSlider(Qt.Horizontal)
-        self.calc_n.setRange(4, 200)
-        self.calc_n.setValue(20)
-        n_row.addWidget(self.calc_n, stretch=1)
-        layout.addLayout(n_row)
-
-        self.calc_integral_label = QLabel("")
-        self.calc_integral_label.setObjectName("Caption")
-        self.calc_integral_label.setWordWrap(True)
-        self.calc_int_canvas = PlotCanvas()
-        layout.addWidget(self.calc_integral_label)
-        layout.addWidget(self.calc_int_canvas)
-
-        self.calc_error_label = QLabel("")
-        self.calc_error_label.setObjectName("Error")
-        self.calc_error_label.setWordWrap(True)
-        self.calc_error_label.setHidden(True)
-        layout.addWidget(self.calc_error_label)
-
-        self.calc_expr.returnPressed.connect(self._on_compute)
-        self.calc_expr.editingFinished.connect(self._on_compute)
-        for spin in (self.calc_xmin, self.calc_xmax, self.calc_a, self.calc_b):
-            spin.valueChanged.connect(self._on_compute)
-        self.calc_x0 = QSlider(Qt.Horizontal)
-        self.calc_x0.setRange(0, 1000)
-        self.calc_x0.setValue(500)
-        self.calc_x0.valueChanged.connect(self._on_compute)
-        self.calc_n.valueChanged.connect(self._on_compute)
-
-        x0_row = QHBoxLayout()
-        x0_row.addWidget(QLabel("切线位置 x₀"))
-        x0_row.addWidget(self.calc_x0, stretch=1)
-        layout.insertLayout(2, x0_row)
-        return panel
     def _build_result_card(self) -> QFrame:
         self.result_card = QFrame()
         self.result_card.setObjectName("Card")
@@ -690,78 +610,11 @@ class MainWindow(QWidget):
     # ---------------- 计算 ----------------
 
     def _run_calculus(self) -> None:
-        try:
-            f = parse_expression(self.calc_expr.text())
-        except ExpressionError as exc:
-            self.calc_error_label.setText(str(exc))
-            self.calc_error_label.setHidden(False)
-            return
-        self.calc_error_label.setHidden(True)
-        try:
-            self._render_calculus_plots(f)
-        except (ArithmeticError, TypeError, ValueError) as exc:
-            self.calc_error_label.setText(f"表达式无法求值：{exc}")
-            self.calc_error_label.setHidden(False)
+        run_calculus(self)
 
     def _render_calculus_plots(self, f) -> None:
-        from ..visualization import _setup_plot_style
+        render_calculus_plots(self, f)
 
-        _setup_plot_style()
-        xmin, xmax = sorted((self.calc_xmin.value(), self.calc_xmax.value()))
-        if xmax - xmin < 1e-9:
-            xmax = xmin + 1.0
-        xs = np.linspace(xmin, xmax, 400)
-        with np.errstate(all="ignore"):
-            ys = f(xs)
-
-        # 函数曲线 + 切线
-        frac = self.calc_x0.value() / self.calc_x0.maximum()
-        x0 = xmin + frac * (xmax - xmin)
-        slope = derivative_value(f, x0)
-        y0 = float(f(x0))
-
-        fig = self.calc_func_canvas.figure
-        fig.clear()
-        ax = fig.add_subplot(111)
-        ax.plot(xs, ys, color="#1f77b4", lw=1.8, label="f(x)")
-        if np.isfinite(y0) and np.isfinite(slope):
-            half = (xmax - xmin) * 0.18
-            tx = np.linspace(x0 - half, x0 + half, 2)
-            ax.plot(tx, y0 + slope * (tx - x0), color="#ff9500", lw=1.6, label="切线")
-            ax.plot([x0], [y0], "o", color="#d13438", markersize=6)
-            self.calc_tangent_label.setText(
-                f"x₀ = {x0:.3g}    f(x₀) = {y0:.4g}    切线斜率 f'(x₀) ≈ {slope:.4g}"
-            )
-        else:
-            self.calc_tangent_label.setText(f"x₀ = {x0:.3g}（该点无定义或值无效）")
-        ax.set_title("函数曲线与切线", fontsize=11)
-        ax.grid(True, linestyle="--", alpha=0.4)
-        ax.legend(loc="upper left", fontsize=9)
-        self.calc_func_canvas.adjust_layout()
-        self.calc_func_canvas.draw()
-
-        # 黎曼和 + 辛普森对比
-        a, b = self.calc_a.value(), self.calc_b.value()
-        n = self.calc_n.value()
-        total, lefts, heights, widths = riemann_midpoint(f, a, b, n)
-        simpson = simpson_integral(f, a, b, n=max(n, 200))
-        fig2 = self.calc_int_canvas.figure
-        fig2.clear()
-        ax2 = fig2.add_subplot(111)
-        ax2.bar(lefts, heights, width=widths, align="edge", alpha=0.55,
-                color="#0071e3", edgecolor="white", label=f"黎曼和（n={n}）")
-        xs2 = np.linspace(min(a, b), max(a, b), 300)
-        with np.errstate(all="ignore"):
-            ax2.plot(xs2, f(xs2), color="#d62728", lw=1.8, label="f(x)")
-        ax2.set_title("定积分 = 曲线下面积", fontsize=11)
-        ax2.grid(True, linestyle="--", alpha=0.4)
-        ax2.legend(loc="upper left", fontsize=9)
-        self.calc_int_canvas.adjust_layout()
-        self.calc_int_canvas.draw()
-
-        self.calc_integral_label.setText(
-            f"区间 [{min(a, b):.3g}, {max(a, b):.3g}]    黎曼和 ≈ {total:.5g}    辛普森 ≈ {simpson:.5g}"
-        )
     def _on_compute(self) -> None:
         self._clear_output()
         kind = self._current_kind()
