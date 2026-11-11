@@ -6,6 +6,14 @@ import os
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
+# 预加载 matplotlib QtAgg 后端：必须在 QApplication 与任何控件创建前
+# 完成，否则 Linux/Python 3.11 下在回调中懒加载会触发 shiboken GC
+# 段错误（CI Python 3.11 作业曾因此 SIGSEGV）。matplotlib 缺失时跳过。
+try:
+    from matrix_calculator.desktop import plots  # noqa: F401
+except ImportError:
+    pass
+
 import numpy as np
 import pytest
 from PySide6.QtWidgets import QApplication, QTableWidgetItem
