@@ -1,6 +1,8 @@
 # Matrix Calculator / 矩阵计算器
 
-一个用于学习线性代数的 Python 矩阵计算器。它既是一个命令行工具，也是一组可以在 Jupyter Notebook、脚本或未来 GUI 中复用的计算函数。
+一个面向线性代数与数值微积分入门的 Python 学习工具。项目提供 PySide6 桌面界面、命令行工具，以及可在 Jupyter Notebook 和脚本中复用的 NumPy 计算核心；Streamlit 网页版处于维护状态。
+
+桌面端是后续新功能的主要方向。阶段路线、验收条件和收尾记录见 [项目计划](plans/PROJECT_PLAN.md)。
 
 ## 功能
 
@@ -29,10 +31,11 @@ src/matrix_calculator/
 
 src/matrix_calculator.py # 兼容旧运行方式的薄入口
 tests/                   # pytest 测试
-streamlit_app.py        # Streamlit 网页界面（初版）
+streamlit_app.py        # Streamlit 网页界面（维护状态）
+plans/PROJECT_PLAN.md   # 阶段路线、验收条件与收尾记录
 ```
 
-核心设计原则：**数学计算函数不直接读取输入，也不直接打印结果**。参数不合法时抛出 `MatrixOperationError`，由命令行、Notebook 或未来的 GUI 决定如何展示。
+核心设计原则：**数学计算函数不直接读取输入，也不直接打印结果**。矩阵参数不合法时抛出 `MatrixOperationError`；微积分表达式解析失败时抛出 `ExpressionError`，求值错误由桌面界面转换为用户可读提示。
 
 ## 运行命令行版本
 
@@ -172,6 +175,13 @@ matrix-calculator-desktop
   双矩阵结果、2 元方程组、二次型）会在结果下方自动给出 Matplotlib 图示。
 - 计算结果可一键复制为文本，并可导出 TXT（完整结果）、CSV 和 NumPy 文本（与网页版相同的三种格式）。
 - 界面采用 Apple 风格的玻璃质感主题。
+
+微积分功能的使用边界：
+
+- 表达式支持 `x`、数字、括号、`+`、`-`、`*`、`/`、`**`（或 `^`），以及 `sin`、`cos`、`tan`、反三角函数、`exp`、`log`、`log10`、`sqrt`、`abs`、`pi` 和 `e`。
+- 切线斜率使用中心差分，积分使用中点黎曼和与辛普森法；结果均为**数值近似**，不是符号求导或精确积分。
+- 当前版本适合连续且能在采样点有限求值的函数，不会自动识别奇点、不连续点或所有定义域问题；结果出现异常时应调整区间并人工核查。
+- 积分上下限会按大小排序，反向区间不按有向积分取负；更完整的误差与方法教学列入后续阶段。
 
 ## 后续计划
 
