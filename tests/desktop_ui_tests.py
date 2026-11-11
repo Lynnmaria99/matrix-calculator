@@ -66,7 +66,7 @@ def _op(window, label: str) -> None:
 class TestNavigation:
     def test_sidebar_pages(self, window):
         assert list(window.nav_buttons) == [
-            "双矩阵运算", "单矩阵运算", "解线性方程组", "二次型分析",
+            "双矩阵运算", "单矩阵运算", "解线性方程组", "二次型分析", "微积分",
         ]
 
     def test_op_buttons_per_page(self, window):
@@ -443,3 +443,57 @@ class TestPlotToggle:
         layout = window.details_group.parent().layout()
         assert layout.indexOf(window.details_group) < layout.indexOf(window.plot_section)
 
+
+
+class TestCalculusPage:
+    def test_page_shows_panel_hides_matrices(self, window):
+        _page(window, "微积分")
+        assert not window.calc_panel.isHidden()
+        assert window.input_a.isHidden()
+        assert window.input_b.isHidden()
+        assert window.result_card.isHidden()
+
+    def test_default_sin_rendered(self, window):
+        _page(window, "微积分")
+        assert window.calc_func_canvas.figure.axes
+        assert window.calc_int_canvas.figure.axes
+
+    def test_expression_change_updates(self, window):
+        _page(window, "微积分")
+        window.calc_expr.setText("x^2")
+        window._on_compute()
+        assert "切线斜率" in window.calc_tangent_label.text()
+
+    def test_slider_updates_integral_label(self, window):
+        _page(window, "微积分")
+        window.calc_expr.setText("x^2")
+        window._on_compute()
+        before = window.calc_integral_label.text()
+        window.calc_n.setValue(60)
+        window._on_compute()
+        after = window.calc_integral_label.text()
+        assert "黎曼和" in after and before != after
+
+    def test_bad_expression_shows_error(self, window):
+        _page(window, "微积分")
+        window.calc_expr.setText("y + 1")
+        window._on_compute()
+        assert not window.calc_error_label.isHidden()
+        assert "不支持的符号" in window.calc_error_label.text()
+
+    def test_unevaluable_expression_shows_error(self, window):
+        _page(window, "微积分")
+        window.calc_expr.setText("1 / 0")
+        window._on_compute()
+        assert not window.calc_error_label.isHidden()
+        assert "无法求值" in window.calc_error_label.text()
+
+    def test_examples_load_expression(self, window):
+        _page(window, "微积分")
+        buttons = [
+            window.example_layout.itemAt(i).widget()
+            for i in range(window.example_layout.count())
+        ]
+        buttons = [b for b in buttons if b is not None]
+        buttons[1].click()  # x³−3x
+        assert window.calc_expr.text() == "x^3 - 3*x"

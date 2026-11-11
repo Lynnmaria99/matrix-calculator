@@ -52,29 +52,292 @@ st.set_page_config(page_title="矩阵计算器", page_icon="🧮", layout="wide"
 MAX_DIMENSION = 12
 
 
-APP_THEME_CSS = """
-<style>
+# ==================== 设计 token 与主题系统 ====================
+#
+# 颜色、阴影、圆角全部收敛为语义变量。浅色值与历史硬编码一致（保证视觉零回归），
+# 深色为独立色板；矩阵组件位于 Shadow DOM，CSS 自定义属性可穿透边界自动换肤。
+
+_THEME_RADIUS = """
   :root {
-    --mx-blue: #0071e3;
-    --mx-text: #1d1d1f;
-    --mx-muted: #6e6e73;
-    --mx-glass: rgba(255, 255, 255, 0.62);
-    --mx-glass-strong: rgba(255, 255, 255, 0.78);
-    --mx-glass-border: rgba(255, 255, 255, 0.76);
-    --mx-shadow: 0 22px 60px rgba(15, 23, 42, 0.10);
-    --mx-shadow-soft: 0 10px 28px rgba(15, 23, 42, 0.08);
     --mx-font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
       "Segoe UI Variable Display", "Segoe UI", "PingFang SC", "Microsoft YaHei",
       sans-serif;
+    --mx-radius-pill: 999px;
+    --mx-radius-card: 24px;
+    --mx-radius-lg: 18px;
+    --mx-radius-md: 16px;
+    --mx-radius-cell: 0.9rem;
   }
+"""
 
-  .stApp,
-  .stAppViewContainer {
-    background:
+# 浅色 token（取值与重构前完全一致）
+_THEME_LIGHT = """
+  :root {
+    /* 背景与表面 */
+    --mx-bg-image:
       radial-gradient(1100px 520px at 8% -8%, rgba(0, 113, 227, 0.20), transparent 58%),
       radial-gradient(900px 520px at 98% -4%, rgba(175, 82, 222, 0.15), transparent 55%),
       radial-gradient(820px 620px at 78% 100%, rgba(48, 209, 188, 0.15), transparent 60%),
-      linear-gradient(180deg, #f8faff 0%, #eef3fb 100%) !important;
+      linear-gradient(180deg, #f8faff 0%, #eef3fb 100%);
+    --mx-sidebar-bg: rgba(255, 255, 255, 0.56);
+    --mx-sidebar-border: rgba(255, 255, 255, 0.72);
+    --mx-glass: rgba(255, 255, 255, 0.62);
+    --mx-glass-strong: rgba(255, 255, 255, 0.78);
+    --mx-glass-border: rgba(255, 255, 255, 0.76);
+    --mx-inset: rgba(255, 255, 255, 0.78);
+    --mx-group-bg: rgba(255, 255, 255, 0.54);
+    --mx-group-border: rgba(255, 255, 255, 0.78);
+    --mx-group-hover: rgba(255, 255, 255, 0.66);
+    --mx-group-active: rgba(255, 255, 255, 0.94);
+    --mx-ghost-bg: rgba(255, 255, 255, 0.62);
+    --mx-ghost-border: rgba(255, 255, 255, 0.82);
+    --mx-code-bg: rgba(255, 255, 255, 0.85);
+    --mx-code-border: rgba(221, 229, 240, 0.9);
+    --mx-code-inset: rgba(255, 255, 255, 0.68);
+    --mx-metric-bg: rgba(255, 255, 255, 0.66);
+    --mx-metric-border: rgba(255, 255, 255, 0.82);
+    --mx-cell-bg: rgba(255, 255, 255, 0.70);
+    --mx-cell-border: rgba(255, 255, 255, 0.88);
+    --mx-cell-inset: rgba(255, 255, 255, 0.86);
+    /* 文字 */
+    --mx-text: #1d1d1f;
+    --mx-muted: #6e6e73;
+    /* 品牌色 */
+    --mx-blue: #0071e3;
+    --mx-blue-strong: #2b9aff;
+    --mx-blue-text: #0062c4;
+    --mx-blue-focus: rgba(0, 113, 227, 0.55);
+    --mx-blue-ring: rgba(0, 113, 227, 0.16);
+    --mx-blue-glow: rgba(0, 113, 227, 0.16);
+    --mx-primary-gradient: linear-gradient(180deg, #2b9aff 0%, #0071e3 100%);
+    --mx-primary-shadow: 0 12px 26px rgba(0, 113, 227, 0.22);
+    --mx-primary-shadow-hover: 0 15px 32px rgba(0, 113, 227, 0.28);
+    /* 状态色 */
+    --mx-danger: #d64545;
+    --mx-danger-bg: rgba(214, 69, 69, 0.12);
+    --mx-bracket: rgba(80, 93, 124, 0.42);
+    /* 阴影 */
+    --mx-shadow: 0 22px 60px rgba(15, 23, 42, 0.10);
+    --mx-shadow-soft: 0 10px 28px rgba(15, 23, 42, 0.08);
+    --mx-shadow-btn: 0 7px 18px rgba(15, 23, 42, 0.06);
+    /* 提示语义色 */
+    --mx-success-text: #1c7c43;
+    --mx-warning-text: #9a6700;
+    --mx-error-text: #c0392b;
+    --mx-info-text: #0a5fb8;
+  }
+"""
+
+# 深色 token（深蓝灰底，避免纯黑；主色提亮以保证对比）
+_THEME_DARK = """
+  :root {
+    color-scheme: dark;
+    /* 背景与表面 */
+    --mx-bg-image:
+      radial-gradient(1100px 520px at 8% -8%, rgba(40, 120, 230, 0.18), transparent 58%),
+      radial-gradient(900px 520px at 98% -4%, rgba(150, 90, 220, 0.14), transparent 55%),
+      radial-gradient(820px 620px at 78% 100%, rgba(40, 190, 175, 0.10), transparent 60%),
+      linear-gradient(180deg, #0b0f16 0%, #0d1422 100%);
+    --mx-sidebar-bg: rgba(22, 29, 43, 0.62);
+    --mx-sidebar-border: rgba(255, 255, 255, 0.08);
+    --mx-glass: rgba(30, 39, 56, 0.55);
+    --mx-glass-strong: rgba(33, 43, 62, 0.82);
+    --mx-glass-border: rgba(255, 255, 255, 0.09);
+    --mx-inset: rgba(255, 255, 255, 0.05);
+    --mx-group-bg: rgba(255, 255, 255, 0.05);
+    --mx-group-border: rgba(255, 255, 255, 0.10);
+    --mx-group-hover: rgba(255, 255, 255, 0.10);
+    --mx-group-active: rgba(60, 96, 150, 0.32);
+    --mx-ghost-bg: rgba(255, 255, 255, 0.06);
+    --mx-ghost-border: rgba(255, 255, 255, 0.12);
+    --mx-code-bg: rgba(12, 18, 29, 0.78);
+    --mx-code-border: rgba(255, 255, 255, 0.10);
+    --mx-code-inset: rgba(255, 255, 255, 0.04);
+    --mx-metric-bg: rgba(255, 255, 255, 0.05);
+    --mx-metric-border: rgba(255, 255, 255, 0.10);
+    --mx-cell-bg: rgba(255, 255, 255, 0.05);
+    --mx-cell-border: rgba(255, 255, 255, 0.12);
+    --mx-cell-inset: rgba(255, 255, 255, 0.05);
+    /* 文字 */
+    --mx-text: #e7ebf3;
+    --mx-muted: #9aa6ba;
+    /* 品牌色（暗底提亮） */
+    --mx-blue: #4d9fff;
+    --mx-blue-strong: #6cb0ff;
+    --mx-blue-text: #82bdff;
+    --mx-blue-focus: rgba(120, 180, 255, 0.65);
+    --mx-blue-ring: rgba(120, 180, 255, 0.22);
+    --mx-blue-glow: rgba(77, 159, 255, 0.28);
+    --mx-primary-gradient: linear-gradient(180deg, #3d97ff 0%, #2b7fe0 100%);
+    --mx-primary-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+    --mx-primary-shadow-hover: 0 15px 34px rgba(40, 120, 230, 0.40);
+    /* 状态色 */
+    --mx-danger: #ff7a7a;
+    --mx-danger-bg: rgba(255, 107, 107, 0.16);
+    --mx-bracket: rgba(165, 180, 205, 0.55);
+    /* 阴影（深色下更柔、更深） */
+    --mx-shadow: 0 22px 60px rgba(0, 0, 0, 0.45);
+    --mx-shadow-soft: 0 10px 28px rgba(0, 0, 0, 0.35);
+    --mx-shadow-btn: 0 7px 18px rgba(0, 0, 0, 0.30);
+    /* 提示语义色 */
+    --mx-success-text: #7ee2a8;
+    --mx-warning-text: #ffcf7a;
+    --mx-error-text: #ff9b9b;
+    --mx-info-text: #9cc8ff;
+  }
+"""
+
+# 深色下对 Streamlit 原生控件的额外覆盖（浅色不需要，基线已适配）
+_THEME_DARK_OVERRIDES = """
+  .stApp { color-scheme: dark; }
+  /* 根节点深色兜底：.stApp 渐变之外（过度滚动/边缘）不露浅色底 */
+  html,
+  body,
+  [data-testid="stMain"],
+  [data-testid="stAppViewContainer"] {
+    background-color: #0d1422;
+  }
+  .stApp,
+  .stApp .stMarkdownContainer,
+  .stApp p,
+  .stApp li,
+  .stApp td,
+  .stApp th,
+  .stApp span {
+    color: var(--mx-text);
+  }
+  .stApp a,
+  .stApp a:visited {
+    color: var(--mx-blue-text);
+  }
+  .stApp hr {
+    border-color: var(--mx-glass-border);
+  }
+  [data-testid="stWidgetLabel"],
+  [data-testid="stWidgetLabel"] p {
+    color: var(--mx-muted);
+  }
+  /* 侧边栏单选导航 */
+  [data-testid="stRadio"] label p,
+  [data-testid="stRadioOption"] p {
+    color: var(--mx-text);
+  }
+  [data-testid="stRadio"] [aria-checked="true"] p {
+    color: var(--mx-blue-text);
+  }
+  /* 原生输入类控件兜底（矩阵输入在 Shadow DOM 内自管，不受影响） */
+  .stApp input,
+  .stApp textarea,
+  .stApp select {
+    background-color: var(--mx-cell-bg);
+    color: var(--mx-text);
+    border-color: var(--mx-cell-border);
+  }
+  .stApp input::placeholder,
+  .stApp textarea::placeholder {
+    color: var(--mx-muted);
+  }
+  /* 开关、复选、选择类容器 */
+  [data-testid="stToggle"] {
+    color: var(--mx-text);
+  }
+  /* 弹出层（popover / 下载菜单等挂在 portal） */
+  [data-testid="stPopover"],
+  [data-testid="portal"] {
+    background: var(--mx-glass-strong);
+    color: var(--mx-text);
+    border: 1px solid var(--mx-glass-border);
+  }
+  [data-testid="stPopover"] p,
+  [data-testid="portal"] p {
+    color: var(--mx-text);
+  }
+  /* popover 内容体挂在 body 下的 portal，自带浅色底，需单独覆盖 */
+  [data-testid="stPopoverBody"] {
+    background: var(--mx-glass-strong);
+    color: var(--mx-text);
+    border: 1px solid var(--mx-glass-border);
+  }
+  [data-testid="stPopoverBody"] p,
+  [data-testid="stPopoverBody"] span {
+    color: var(--mx-text);
+  }
+  /* 代码块内部 pre 被基础主题设为不透明白底，深色下强制换肤 */
+  .stApp [data-testid="stCode"] pre,
+  .stApp pre {
+    background: var(--mx-code-bg) !important;
+    border: 1px solid var(--mx-code-border);
+    color: var(--mx-text);
+  }
+  .stApp [data-testid="stCode"] code,
+  .stApp pre code {
+    color: var(--mx-text);
+  }
+  /* 代码块复制按钮的白色背板（按钮外层包装 div，用 :has 命中） */
+  .stApp [data-testid="stCode"] div:has(> [data-testid="stElementToolbarButton"]),
+  .stApp [data-testid="stCode"] [data-testid="stElementToolbarButton"] {
+    background: var(--mx-ghost-bg) !important;
+    border: 1px solid var(--mx-ghost-border);
+    border-radius: var(--mx-radius-md);
+  }
+  /* 顶栏菜单 / 部署按钮 */
+  [data-testid="stMainMenu"] button,
+  [data-testid="stAppDeployButton"],
+  [data-testid="stBaseButton-header"],
+  [data-testid="stBaseButton-headerNoPadding"] {
+    background: var(--mx-ghost-bg);
+    color: var(--mx-text);
+    border: 1px solid var(--mx-ghost-border);
+  }
+  /* 提示条四种语义色 */
+  [data-testid="stAlert"] {
+    background: var(--mx-glass);
+    border: 1px solid var(--mx-glass-border);
+  }
+  [data-testid="stAlertContentSuccess"],
+  [data-testid="stAlertContentSuccess"] * {
+    color: var(--mx-success-text);
+  }
+  [data-testid="stAlertContentInfo"],
+  [data-testid="stAlertContentInfo"] * {
+    color: var(--mx-info-text);
+  }
+  [data-testid="stAlertContentWarning"],
+  [data-testid="stAlertContentWarning"] * {
+    color: var(--mx-warning-text);
+  }
+  [data-testid="stAlertContentError"],
+  [data-testid="stAlertContentError"] * {
+    color: var(--mx-error-text);
+  }
+  /* 工具提示 */
+  [role="tooltip"] {
+    background: var(--mx-glass-strong);
+    color: var(--mx-text);
+    border: 1px solid var(--mx-glass-border);
+  }
+  /* 深色滚动条 */
+  .stApp *::-webkit-scrollbar,
+  .matrix-widget *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  .stApp *::-webkit-scrollbar-thumb,
+  .matrix-widget *::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.18);
+    border-radius: var(--mx-radius-pill);
+  }
+  .stApp *::-webkit-scrollbar-track,
+  .matrix-widget *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+"""
+
+# 主题无关规则：只引用变量，切换 token 即整体换肤
+_APP_RULES = """
+  .stApp,
+  .stAppViewContainer {
+    background: var(--mx-bg-image) !important;
     color: var(--mx-text);
     font-family: var(--mx-font);
   }
@@ -92,24 +355,28 @@ APP_THEME_CSS = """
     padding: 2.35rem 2rem 4.5rem;
   }
 
-  h1, h2, h3 {
+  .stApp h1,
+  .stApp h2,
+  .stApp h3 {
     letter-spacing: -0.025em;
   }
 
-  h1 {
-    font-size: 2.35rem;
+  .stApp h1 {
+    font-size: 2.1rem;
     font-weight: 700;
+    line-height: 1.2;
   }
 
-  h2 {
-    font-size: 1.55rem;
+  .stApp h2 {
+    font-size: 1.45rem;
     font-weight: 650;
+    line-height: 1.3;
   }
 
   [data-testid="stSidebar"] {
-    background: rgba(255, 255, 255, 0.56);
-    border-right: 1px solid rgba(255, 255, 255, 0.72);
-    box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.45);
+    background: var(--mx-sidebar-bg);
+    border-right: 1px solid var(--mx-sidebar-border);
+    box-shadow: inset -1px 0 0 var(--mx-inset);
     backdrop-filter: blur(32px) saturate(180%);
     -webkit-backdrop-filter: blur(32px) saturate(180%);
   }
@@ -121,10 +388,10 @@ APP_THEME_CSS = """
   [data-testid="stLayoutWrapper"] > [data-testid="stVerticalBlock"] {
     background: var(--mx-glass) !important;
     border: 1px solid var(--mx-glass-border) !important;
-    border-radius: 24px !important;
+    border-radius: var(--mx-radius-card) !important;
     box-shadow:
       var(--mx-shadow),
-      inset 0 1px 0 rgba(255, 255, 255, 0.78) !important;
+      inset 0 1px 0 var(--mx-inset) !important;
     padding: 1.15rem 1.25rem;
     backdrop-filter: blur(30px) saturate(180%);
     -webkit-backdrop-filter: blur(30px) saturate(180%);
@@ -136,12 +403,12 @@ APP_THEME_CSS = """
   }
 
   [data-testid="stButtonGroup"] {
-    background: rgba(255, 255, 255, 0.54);
-    border: 1px solid rgba(255, 255, 255, 0.78);
-    border-radius: 999px;
+    background: var(--mx-group-bg);
+    border: 1px solid var(--mx-group-border);
+    border-radius: var(--mx-radius-pill);
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.8),
-      0 8px 24px rgba(15, 23, 42, 0.06);
+      inset 0 1px 0 var(--mx-inset),
+      var(--mx-shadow-btn);
     gap: 2px;
     padding: 4px;
     backdrop-filter: blur(24px) saturate(180%);
@@ -151,39 +418,39 @@ APP_THEME_CSS = """
   [data-testid="stButtonGroup"] button {
     background: transparent !important;
     border: 0 !important;
-    border-radius: 999px !important;
+    border-radius: var(--mx-radius-pill) !important;
     color: var(--mx-text) !important;
     font-weight: 550;
     min-height: 34px;
   }
 
   [data-testid="stButtonGroup"] button:hover {
-    background: rgba(255, 255, 255, 0.66) !important;
+    background: var(--mx-group-hover) !important;
   }
 
   [data-testid="stButtonGroup"] button[aria-checked="true"],
   [data-testid="stButtonGroup"] button[aria-pressed="true"] {
-    background: rgba(255, 255, 255, 0.94) !important;
+    background: var(--mx-group-active) !important;
     box-shadow:
-      0 7px 18px rgba(0, 113, 227, 0.16),
+      var(--mx-shadow-btn),
       0 1px 2px rgba(15, 23, 42, 0.08);
-    color: var(--mx-blue) !important;
+    color: var(--mx-blue-text) !important;
   }
 
   [data-testid="stButtonGroup"] button[aria-checked="true"] *,
   [data-testid="stButtonGroup"] button[aria-pressed="true"] * {
-    color: var(--mx-blue) !important;
+    color: var(--mx-blue-text) !important;
   }
 
   .stButton button:not([kind="primary"]),
   .stDownloadButton button:not([kind="primary"]),
   .stPopover button {
-    background: rgba(255, 255, 255, 0.62) !important;
-    border: 1px solid rgba(255, 255, 255, 0.82) !important;
-    border-radius: 999px !important;
+    background: var(--mx-ghost-bg) !important;
+    border: 1px solid var(--mx-ghost-border) !important;
+    border-radius: var(--mx-radius-pill) !important;
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.78),
-      0 7px 18px rgba(15, 23, 42, 0.06);
+      inset 0 1px 0 var(--mx-inset),
+      var(--mx-shadow-btn);
     color: var(--mx-text) !important;
     backdrop-filter: blur(18px) saturate(160%);
     -webkit-backdrop-filter: blur(18px) saturate(160%);
@@ -192,24 +459,24 @@ APP_THEME_CSS = """
   .stButton button:not([kind="primary"]):hover,
   .stDownloadButton button:not([kind="primary"]):hover,
   .stPopover button:hover {
-    border-color: rgba(0, 113, 227, 0.45) !important;
-    color: var(--mx-blue) !important;
+    border-color: var(--mx-blue-focus) !important;
+    color: var(--mx-blue-text) !important;
     transform: translateY(-1px);
   }
 
   .stButton button[kind="primary"],
   .stDownloadButton button[kind="primary"] {
-    background: linear-gradient(180deg, #2b9aff 0%, #0071e3 100%) !important;
+    background: var(--mx-primary-gradient) !important;
     border: 1px solid rgba(255, 255, 255, 0.28) !important;
-    border-radius: 999px !important;
-    box-shadow: 0 12px 26px rgba(0, 113, 227, 0.22);
+    border-radius: var(--mx-radius-pill) !important;
+    box-shadow: var(--mx-primary-shadow);
     font-weight: 650;
     padding: 0.58rem 1.35rem !important;
     transition: transform 160ms ease, box-shadow 160ms ease;
   }
 
   .stButton button[kind="primary"]:hover {
-    box-shadow: 0 15px 32px rgba(0, 113, 227, 0.28);
+    box-shadow: var(--mx-primary-shadow-hover);
     transform: translateY(-1px);
   }
 
@@ -218,7 +485,7 @@ APP_THEME_CSS = """
   }
 
   [data-testid="stAlert"] {
-    border-radius: 18px;
+    border-radius: var(--mx-radius-lg);
     backdrop-filter: blur(20px) saturate(160%);
     -webkit-backdrop-filter: blur(20px) saturate(160%);
   }
@@ -226,10 +493,10 @@ APP_THEME_CSS = """
   [data-testid="stText"],
   [data-testid="stCode"],
   pre {
-    background: rgba(255, 255, 255, 0.48);
-    border: 1px solid rgba(255, 255, 255, 0.64);
-    border-radius: 16px;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.68);
+    background: var(--mx-code-bg);
+    border: 1px solid var(--mx-code-border);
+    border-radius: var(--mx-radius-md);
+    box-shadow: inset 0 1px 0 var(--mx-code-inset);
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     line-height: 1.65;
     overflow-x: auto;
@@ -243,19 +510,88 @@ APP_THEME_CSS = """
     color: var(--mx-muted);
   }
 
+  /* 结果指标统一为圆角卡片，数字降级、标签弱化 */
+  [data-testid="stMetric"] {
+    background: var(--mx-metric-bg);
+    border: 1px solid var(--mx-metric-border);
+    border-radius: var(--mx-radius-lg);
+    box-shadow: var(--mx-shadow-soft);
+    padding: 0.85rem 1.05rem;
+  }
+
+  [data-testid="stMetricLabel"] p,
+  [data-testid="stMetricLabel"] {
+    color: var(--mx-muted);
+    font-size: 0.85rem;
+  }
+
+  .stApp [data-testid="stMetricValue"] {
+    font-size: 1.55rem;
+  }
+
+  /* 主操作按钮更易点 */
+  .stButton button[kind="primary"],
+  .stDownloadButton button[kind="primary"] {
+    min-width: 7.5rem;
+  }
+
+  /* 键盘焦点可见性 */
+  .stApp :focus-visible {
+    outline: 3px solid var(--mx-blue-focus);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .stApp *,
+    .stApp *::before,
+    .stApp *::after {
+      animation: none !important;
+      scroll-behavior: auto !important;
+      transition: none !important;
+    }
+  }
+
   @media (max-width: 640px) {
     [data-testid="stMainBlockContainer"] {
       padding-left: 1rem;
       padding-right: 1rem;
     }
+
+    .stButton button[kind="primary"],
+    .stDownloadButton button[kind="primary"] {
+      min-width: 0;
+      width: 100%;
+    }
   }
-</style>
 """
 
 
-def inject_theme() -> None:
-    """注入应用级的 glass 风格样式。"""
-    st.markdown(APP_THEME_CSS, unsafe_allow_html=True)
+def build_app_css(mode: str) -> str:
+    """按主题模式组装完整样式表。mode: system / light / dark。"""
+    if mode == "dark":
+        dark_block = _THEME_DARK + _THEME_DARK_OVERRIDES
+    elif mode == "system":
+        dark_block = (
+            "@media (prefers-color-scheme: dark) {\n"
+            + _THEME_DARK
+            + _THEME_DARK_OVERRIDES
+            + "\n}"
+        )
+    else:
+        dark_block = ""
+    return (
+        "<style>\n"
+        + _THEME_RADIUS
+        + _THEME_LIGHT
+        + dark_block
+        + _APP_RULES
+        + "</style>"
+    )
+
+
+def inject_theme(mode: str = "system") -> None:
+    """注入应用级 glass 风格样式，并按主题模式切换浅色 / 深色色板。"""
+    st.markdown(build_app_css(mode), unsafe_allow_html=True)
 
 
 MATRIX_GRID_HTML = """
@@ -290,8 +626,8 @@ MATRIX_GRID_CSS = """
 }
 
 .matrix-widget {
-  color: var(--st-text-color, #1d1d1f);
-  font-family: var(--st-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
+  color: var(--mx-text, #1d1d1f);
+  font-family: var(--mx-font, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
 }
 .matrix-head {
   align-items: center;
@@ -306,8 +642,8 @@ MATRIX_GRID_CSS = """
   white-space: nowrap;
 }
 .matrix-size {
-  color: var(--st-secondary-text-color, var(--st-text-color));
-  font-family: var(--st-font-family-monospace, ui-monospace, monospace);
+  color: var(--mx-muted, #6e6e73);
+  font-family: var(--mx-font-family-monospace, ui-monospace, monospace);
   font-size: 0.86rem;
   opacity: 0.78;
 }
@@ -318,11 +654,12 @@ MATRIX_GRID_CSS = """
 }
 .matrix-controls button {
   appearance: none;
-  background: rgba(255, 255, 255, 0.62);
-  border: 1px solid rgba(255, 255, 255, 0.82);
-  border-radius: 999px;
-  box-shadow: 0 7px 18px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.78);
-  color: var(--st-text-color, #1d1d1f);
+  background: var(--mx-ghost-bg, rgba(255, 255, 255, 0.62));
+  border: 1px solid var(--mx-ghost-border, rgba(255, 255, 255, 0.82));
+  border-radius: var(--mx-radius-pill, 999px);
+  box-shadow: var(--mx-shadow-btn, 0 7px 18px rgba(15, 23, 42, 0.06)),
+    inset 0 1px 0 var(--mx-inset, rgba(255, 255, 255, 0.78));
+  color: var(--mx-text, #1d1d1f);
   cursor: pointer;
   font: inherit;
   font-size: 0.82rem;
@@ -332,8 +669,8 @@ MATRIX_GRID_CSS = """
   -webkit-backdrop-filter: blur(18px) saturate(160%);
 }
 .matrix-controls button:hover:not(:disabled) {
-  border-color: var(--st-primary-color);
-  color: var(--st-primary-color);
+  border-color: var(--mx-blue-text, #0062c4);
+  color: var(--mx-blue-text, #0062c4);
 }
 .matrix-controls button:disabled {
   cursor: not-allowed;
@@ -342,11 +679,14 @@ MATRIX_GRID_CSS = """
 .matrix-expression {
   display: inline-flex;
   margin: 0.15rem 0 0 0.15rem;
+  max-width: 100%;
+  overflow-x: auto;
   padding: 0.35rem 0.95rem;
   position: relative;
+  -webkit-overflow-scrolling: touch;
 }
 .bracket {
-  border: 2.5px solid rgba(80, 93, 124, 0.42);
+  border: 2.5px solid var(--mx-bracket, rgba(80, 93, 124, 0.42));
   bottom: 0.2rem;
   pointer-events: none;
   position: absolute;
@@ -368,39 +708,63 @@ MATRIX_GRID_CSS = """
   gap: 0.38rem;
 }
 .matrix-cell {
-  background: rgba(255, 255, 255, 0.70);
-  border: 1px solid rgba(255, 255, 255, 0.88);
-  border-radius: 0.9rem;
+  background: var(--mx-cell-bg, rgba(255, 255, 255, 0.70));
+  border: 1px solid var(--mx-cell-border, rgba(255, 255, 255, 0.88));
+  border-radius: var(--mx-radius-cell, 0.9rem);
   box-shadow:
-    0 8px 20px rgba(15, 23, 42, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.86);
-  color: var(--st-text-color, #1d1d1f);
+    var(--mx-shadow-btn, 0 8px 20px rgba(15, 23, 42, 0.06)),
+    inset 0 1px 0 var(--mx-cell-inset, rgba(255, 255, 255, 0.86));
+  color: var(--mx-text, #1d1d1f);
   font: inherit;
   font-variant-numeric: tabular-nums;
   height: 2.28rem;
-  min-width: 3.65rem;
+  min-width: 2.5rem;
   padding: 0.1rem 0.25rem;
   text-align: center;
-  width: 3.65rem;
+  width: clamp(2.5rem, 13vw, 3.65rem);
   backdrop-filter: blur(18px) saturate(160%);
   -webkit-backdrop-filter: blur(18px) saturate(160%);
 }
 .matrix-cell:focus {
-  border-color: rgba(0, 113, 227, 0.55);
+  border-color: var(--mx-blue-focus, rgba(0, 113, 227, 0.55));
   box-shadow:
-    0 0 0 4px rgba(0, 113, 227, 0.16),
-    0 10px 22px rgba(0, 113, 227, 0.10);
+    0 0 0 4px var(--mx-blue-ring, rgba(0, 113, 227, 0.16)),
+    0 10px 22px var(--mx-blue-glow, rgba(0, 113, 227, 0.10));
   outline: none;
 }
 .matrix-cell.invalid {
-  background: rgba(214, 69, 69, 0.12);
-  border-color: #d64545;
+  background: var(--mx-danger-bg, rgba(214, 69, 69, 0.12));
+  border-color: var(--mx-danger, #d64545);
 }
 .matrix-error {
-  color: #d64545;
+  color: var(--mx-danger, #d64545);
   font-size: 0.84rem;
   min-height: 1.15rem;
   padding-top: 0.15rem;
+}
+
+@media (max-width: 640px) {
+  .matrix-grid {
+    gap: 0.3rem;
+  }
+
+  .matrix-cell {
+    border-radius: 0.7rem;
+    height: 2rem;
+  }
+
+  .matrix-expression {
+    padding: 0.3rem 0.7rem;
+  }
+
+  .matrix-controls {
+    gap: 0.22rem;
+  }
+
+  .matrix-controls button {
+    font-size: 0.78rem;
+    padding: 0.26rem 0.5rem;
+  }
 }
 """
 
@@ -508,7 +872,9 @@ function resizeMatrix(root, action) {
 
   const focusRow = action.startsWith("add") ? rows - 1 : 0;
   const focusCol = action === "add-col" ? cols - 1 : 0;
-  root.querySelector(`.matrix-cell[data-row="${focusRow}"][data-col="${focusCol}"]`)?.focus();
+  // preventScroll：移动端宽矩阵横向滚动时，聚焦新格不会把首列顶出视口
+  root.querySelector(`.matrix-cell[data-row="${focusRow}"][data-col="${focusCol}"]`)
+    ?.focus({ preventScroll: true });
 }
 
 function validateCell(input) {
@@ -1436,15 +1802,28 @@ def page_quadratic() -> None:
 # ==================== 主导航 ====================
 
 
-def main() -> None:
-    inject_theme()
-    st.title("矩阵计算器")
-    st.caption("NumPy 计算核心 · 线性代数学习工具")
+THEME_LABELS = ["跟随系统", "浅色", "深色"]
+_THEME_MODE_MAP = {"跟随系统": "system", "浅色": "light", "深色": "dark"}
 
+
+def main() -> None:
     page = st.sidebar.radio(
         "功能",
         ["双矩阵运算", "单矩阵运算", "解线性方程组", "二次型分析"],
     )
+    st.sidebar.divider()
+    theme_label = st.sidebar.segmented_control(
+        "外观",
+        THEME_LABELS,
+        default="跟随系统",
+        key="mx_theme_label",
+    ) or "跟随系统"
+    # 先拿到主题选择，再在主内容渲染前注入对应色板，避免切换闪烁
+    inject_theme(_THEME_MODE_MAP[theme_label])
+
+    st.title("矩阵计算器")
+    st.caption("NumPy 计算核心 · 线性代数学习工具")
+
     if page == "双矩阵运算":
         page_binary()
     elif page == "单矩阵运算":
