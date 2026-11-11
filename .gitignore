@@ -40,3 +40,7 @@ crash_log*.txt
 # 浏览器截图审计脚本与截图（本地脚手架）
 shots/
 
+
+# 独立应用打包输出
+build/
+dist/

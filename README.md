@@ -37,6 +37,14 @@ plans/PROJECT_PLAN.md   # 阶段路线、验收条件与收尾记录
 
 核心设计原则：**数学计算函数不直接读取输入，也不直接打印结果**。矩阵参数不合法时抛出 `MatrixOperationError`；微积分表达式解析失败时抛出 `ExpressionError`，求值错误由桌面界面转换为用户可读提示。
 
+## Windows 独立桌面版
+
+项目提供 PyInstaller 打包与 GitHub Releases 自动发布配置。发布后，用户可从 [Releases](https://github.com/Lynnmaria99/matrix-calculator/releases) 下载 `MatrixCalculator-Windows-x64.zip`，完整解压后双击 `MatrixCalculator.exe`，无需安装 Python 或项目依赖。
+
+> 解压后的整个 `MatrixCalculator` 文件夹需要一起保留，不能只把 exe 移到其他位置。
+
+本地构建与发布说明见 [Windows 独立版打包指南](packaging/WINDOWS.md)。
+
 ## 运行命令行版本
 
 不安装也可以直接运行旧入口：

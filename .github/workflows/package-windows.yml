@@ -1,0 +1,71 @@
+name: Windows Package
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+  pull_request:
+    paths:
+      - "pyproject.toml"
+      - "src/**"
+      - "packaging/**"
+      - ".github/workflows/package-windows.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build Windows x64
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Build, verify, and package desktop app
+        shell: pwsh
+        run: |
+          & packaging/windows/build.ps1
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MatrixCalculator-Windows-x64
+          path: dist/MatrixCalculator-Windows-x64.zip
+          retention-days: 14
+          if-no-files-found: error
+
+  release:
+    name: Publish GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: MatrixCalculator-Windows-x64
+          path: dist/release
+
+      - name: Create or update release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $tag = $env:GITHUB_REF_NAME
+          $package = Get-ChildItem -LiteralPath dist/release -Filter '*.zip' | Select-Object -First 1
+          if (-not $package) { throw 'Release ZIP was not found.' }
+
+          & gh release view $tag --repo $env:GITHUB_REPOSITORY 2>$null
+          if ($LASTEXITCODE -eq 0) {
+            & gh release upload $tag $package.FullName --repo $env:GITHUB_REPOSITORY --clobber
+          } else {
+            & gh release create $tag $package.FullName --repo $env:GITHUB_REPOSITORY --generate-notes
+          }
+          if ($LASTEXITCODE -ne 0) { throw 'GitHub Release publishing failed.' }
