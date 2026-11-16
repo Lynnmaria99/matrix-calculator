@@ -10,7 +10,7 @@ Key Features:
 - Input signature computation via SHA-256 hashing
 - Staleness detection by comparing signatures
 - Cache statistics tracking (hit_count, miss_count, total_entries)
-- Framework-agnostic design (no Qt, Streamlit, or other framework imports)
+- Framework-agnostic design (no Qt or other framework imports)
 """
 
 import collections

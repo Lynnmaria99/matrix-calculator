@@ -1,7 +1,7 @@
 """Dimension constraint management for matrix operations.
 
 This module provides centralized management of dimension constraints
-for matrix operations across web, desktop, and CLI interfaces.
+for matrix operations across desktop and CLI interfaces.
 
 It defines constraints (min/max rows/columns, square requirements, resizability)
 and provides utilities to apply and validate those constraints consistently.

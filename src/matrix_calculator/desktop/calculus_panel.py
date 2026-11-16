@@ -112,14 +112,16 @@ def run_calculus(owner: MainWindow) -> None:
     try:
         f = parse_expression(owner.calc_expr.text())
     except ExpressionError as exc:
-        owner.calc_error_label.setText(str(exc))
+        owner.calc_error_label.setText(owner._translate_error(str(exc)))
         owner.calc_error_label.setHidden(False)
         return
     owner.calc_error_label.setHidden(True)
     try:
         owner._render_calculus_plots(f)
     except (ArithmeticError, TypeError, ValueError) as exc:
-        owner.calc_error_label.setText(f"表达式无法求值：{exc}")
+        owner.calc_error_label.setText(
+            owner._translate_error(f"表达式无法求值：{exc}")
+        )
         owner.calc_error_label.setHidden(False)
 
 
@@ -133,6 +135,12 @@ def render_calculus_plots(owner: MainWindow, f) -> None:
     xs = np.linspace(xmin, xmax, 400)
     with np.errstate(all="ignore"):
         ys = f(xs)
+    if not np.all(np.isfinite(ys)):
+        owner.calc_error_label.setText(
+            "当前图示范围包含函数无定义或非有限的点。请缩小区间，避开奇点或定义域边界。"
+        )
+        owner.calc_error_label.setHidden(False)
+        return
 
     # 函数曲线 + 切线
     frac = owner.calc_x0.value() / owner.calc_x0.maximum()
@@ -165,6 +173,13 @@ def render_calculus_plots(owner: MainWindow, f) -> None:
     n = owner.calc_n.value()
     total, lefts, heights, widths = riemann_midpoint(f, a, b, n)
     simpson = simpson_integral(f, a, b, n=max(n, 200))
+    if not np.isfinite(total) or not np.isfinite(simpson) or not np.all(np.isfinite(heights)):
+        owner.calc_error_label.setText(
+            "积分区间内出现函数无定义或非有限值，无法可靠计算。请调整区间并检查函数定义域。"
+        )
+        owner.calc_error_label.setHidden(False)
+        return
+    owner.calc_error_label.setHidden(True)
     fig2 = owner.calc_int_canvas.figure
     fig2.clear()
     ax2 = fig2.add_subplot(111)

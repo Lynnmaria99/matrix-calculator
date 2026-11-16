@@ -2,7 +2,7 @@
 
 **English** · [简体中文](#简体中文)
 
-A Python learning tool for introductory linear algebra and numerical calculus. It includes a PySide6 desktop application, a command-line interface, and a NumPy-powered computation library for scripts and Jupyter notebooks. The Streamlit web interface is maintained for existing functionality; new features are focused on the desktop app.
+A Python learning tool for introductory linear algebra and numerical calculus. It includes a PySide6 desktop application, a command-line interface, and a NumPy-powered computation library for scripts and Jupyter notebooks.
 
 ## Features
 
@@ -67,15 +67,6 @@ python -m pip install -e ".[notebook]"
 jupyter notebook examples/linear_algebra_demo.ipynb
 ```
 
-## Streamlit web interface
-
-The Streamlit interface is in maintenance mode. It supports binary and unary matrix operations, linear-system solving, and quadratic-form analysis.
-
-```bash
-python -m pip install -e ".[web]"
-streamlit run streamlit_app.py
-```
-
 ## Project structure
 
 ```text
@@ -84,7 +75,6 @@ src/matrix_calculator/
 ├── linalg_topics.py    # Linear systems, vector spaces, and quadratic forms
 ├── calculus.py         # Safe expression parsing and numerical calculus
 ├── desktop/            # PySide6 desktop interface
-├── web/                # Streamlit interface
 ├── computation_*.py    # Shared computation and result models
 ├── input_validator.py  # Input validation
 ├── operation_registry.py
@@ -100,7 +90,7 @@ The computation core does not read user input or print results. Invalid matrix a
 ## Development
 
 ```bash
-python -m pip install -e ".[dev,web,desktop]"
+python -m pip install -e ".[dev,desktop]"
 python -m pytest
 ```
 
@@ -120,7 +110,7 @@ Calculus results are numerical approximations, not symbolic derivatives or exact
 
 [回到 English](#matrix-calculator)
 
-这是一个面向线性代数与数值微积分入门的 Python 学习工具，提供 PySide6 桌面应用、命令行界面，以及可供脚本和 Jupyter Notebook 复用的 NumPy 计算库。Streamlit 网页版处于维护状态，新功能优先面向桌面端。
+这是一个面向线性代数与数值微积分入门的 Python 学习工具，提供 PySide6 桌面应用、命令行界面，以及可供脚本和 Jupyter Notebook 复用的 NumPy 计算库。
 
 ### 功能
 
@@ -153,19 +143,10 @@ matrix-calculator
 
 `examples/linear_algebra_demo.ipynb` 展示基础运算、线性方程组分类、二维线性变换图和 SVD 奇异值图。安装与启动方式见上方 [Notebook 说明](#jupyter-notebook-and-visualizations)。
 
-### Streamlit 网页版
-
-网页端目前仅维护已有功能。安装依赖并启动：
-
-```bash
-python -m pip install -e ".[web]"
-streamlit run streamlit_app.py
-```
-
 ### 开发与测试
 
 ```bash
-python -m pip install -e ".[dev,web,desktop]"
+python -m pip install -e ".[dev,desktop]"
 python -m pytest
 ```
 

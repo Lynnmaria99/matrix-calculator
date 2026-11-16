@@ -19,7 +19,7 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=["streamlit", "jupyter", "notebook", "pytest"],
+    excludes=["jupyter", "notebook", "pytest"],
     noarchive=False,
     optimize=0,
 )

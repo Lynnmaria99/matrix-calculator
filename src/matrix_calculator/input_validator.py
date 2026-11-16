@@ -1,6 +1,6 @@
 """Unified matrix input validation and parsing module.
 
-This module consolidates input parsing and validation logic from web and desktop
+This module consolidates input parsing and validation logic for desktop and CLI
 matrix input components. It provides framework-agnostic functions for:
 - Parsing individual cell values (decimals, fractions, scientific notation)
 - Validating and clamping matrix dimensions
@@ -8,7 +8,7 @@ matrix input components. It provides framework-agnostic functions for:
 - Computing input signatures for caching
 
 Design Principles:
-- Framework-agnostic: no Streamlit, Qt, or other UI framework dependencies
+- Framework-agnostic: no Qt or other UI framework dependencies
 - Type-safe: returns structured error/success objects instead of raising exceptions
 - Composable: functions can be used independently or together
 - Efficient: minimal allocations, suitable for interactive UI updates

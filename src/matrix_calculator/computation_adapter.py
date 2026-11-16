@@ -433,7 +433,7 @@ def format_result_for_display(
     """Format a ComputationResult for display in UI or CLI.
 
     Takes a computation result and converts it to a human-readable string
-    suitable for Streamlit, PySide6, or command-line output.
+    suitable for desktop or command-line output.
 
     For success results with numpy array data, formats the matrix using
     result_formatter.format_matrix(). For dict/tuple data (from special

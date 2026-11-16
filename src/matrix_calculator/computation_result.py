@@ -3,7 +3,7 @@
 This module defines the ComputationResult dataclass that encapsulates the
 outcome of any computation (success or failure), along with metadata for
 caching, staleness detection, and error context. It serves as the common
-interface returned by computation functions across web, desktop, and CLI layers.
+interface returned by computation functions across desktop and CLI layers.
 
 The ComputationResult is framework-agnostic and serializable, making it
 suitable for logging, debugging, and cross-layer communication.
@@ -240,7 +240,7 @@ class ComputationResult:
         """Generate a user-friendly message from the computation result.
 
         Formats the result into a concise, readable message suitable for
-        display in UI layers (Streamlit, PySide6, CLI, etc.). For success,
+    display in UI layers (PySide6, CLI, etc.). For success,
         indicates "Operation successful". For errors, prefixes the error
         message with "Error: ".
 

@@ -86,6 +86,12 @@ class TestNavigation:
         assert window._selected_ops["双矩阵运算"] == "A + B"
         assert not window.input_b.isHidden()
 
+    def test_page_guidance_tracks_selected_page(self, window):
+        _page(window, "解线性方程组")
+        assert "列向量 b" in window.guidance_label.text()
+        _page(window, "微积分")
+        assert "数值近似" in window.guidance_label.text()
+
 
 class TestMatrixTableWidget:
     def test_roundtrip(self, qapp):
@@ -110,6 +116,15 @@ class TestMatrixTableWidget:
         widget = MatrixTableWidget("矩阵 A")
         widget.set_cell(0, 0, "abc")
         with pytest.raises(MatrixOperationError, match="不是数字"):
+            widget.get_matrix()
+
+    @pytest.mark.parametrize("value", ["nan", "inf", "-inf"])
+    def test_non_finite_rejected(self, qapp, value):
+        from matrix_calculator.desktop.matrix_input import MatrixTableWidget
+
+        widget = MatrixTableWidget("矩阵 A", rows=1, cols=1)
+        widget.set_cell(0, 0, value)
+        with pytest.raises(MatrixOperationError, match="必须是有限数字"):
             widget.get_matrix()
 
     def test_empty_matrix_rejected(self, qapp):
@@ -230,6 +245,15 @@ class TestUnaryPage:
         assert window.error_label.isHidden()
         assert "特征值" in window.result_label.text()
 
+    def test_complex_eigendecomposition_is_explained(self, window):
+        _page(window, "单矩阵运算")
+        _op(window, "特征分解")
+        _fill(window.input_a, [[0, -1], [1, 0]])
+        window.compute_button.click()
+        assert "复数" in window.result_label.text()
+        assert "j 表示虚数单位" in window.result_label.text()
+        assert "约 4 位有效数字" in window.confidence_label.text()
+
     def test_result_to_a_across_pages(self, window):
         _page(window, "单矩阵运算")
         _op(window, "Aᵀ")
@@ -249,6 +273,8 @@ class TestSolvePage:
         window.compute_button.click()
         assert window.error_label.isHidden()
         assert "唯一解" in window.result_label.text()
+        assert "条件数" in window.details_label.text()
+        assert "秩阈值" in window.details_label.text()
         assert window.details_group.isChecked() is False
         window.details_group.setChecked(True)
         assert "r(A)" in window.details_label.text()
@@ -263,7 +289,18 @@ class TestSolvePage:
 
         _fill(window.input_b, [[1], [3]])
         window.compute_button.click()
-        assert "无解" in window.result_label.text()
+        assert "无精确解" in window.result_label.text()
+        assert "‖Ax−b‖₂ 最小" in window.result_label.text()
+        assert "残差范数" in window.details_label.text()
+
+    def test_copy_payload_includes_numeric_note_and_details(self, window):
+        _page(window, "解线性方程组")
+        _fill(window.input_a, [[2, 1], [1, 3]])
+        _fill(window.input_b, [[4], [5]])
+        window.compute_button.click()
+        copied = window._result_export_text()
+        assert "浮点计算" in copied
+        assert "秩阈值" in copied
 
     def test_solve_example_fills(self, window):
         _page(window, "解线性方程组")
@@ -479,7 +516,16 @@ class TestCalculusPage:
         window.calc_expr.setText("y + 1")
         window._on_compute()
         assert not window.calc_error_label.isHidden()
-        assert "不支持的符号" in window.calc_error_label.text()
+
+    def test_domain_boundary_is_explained(self, window):
+        _page(window, "微积分")
+        window.calc_expr.setText("sqrt(x)")
+        window.calc_xmin.setValue(-2)
+        window.calc_xmax.setValue(2)
+        window._run_calculus()
+        assert not window.calc_error_label.isHidden()
+        assert "缩小区间" in window.calc_error_label.text()
+        assert "定义域边界" in window.calc_error_label.text()
 
     def test_unevaluable_expression_shows_error(self, window):
         _page(window, "微积分")

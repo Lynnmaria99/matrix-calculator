@@ -1,6 +1,6 @@
 # Windows 独立桌面版
 
-本目录提供 Windows x64 独立桌面应用的构建、启动冒烟测试与 GitHub Releases 发布配置。打包结果只包含 PySide6 桌面版，不包含 Streamlit 网页服务。
+本目录提供 Windows x64 独立桌面应用的构建、启动冒烟测试与 GitHub Releases 发布配置。
 
 ## 用户使用
 

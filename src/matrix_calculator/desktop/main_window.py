@@ -112,6 +112,14 @@ PAGES: dict[str, list[str]] = {
     "微积分": [],
 }
 
+PAGE_GUIDANCE = {
+    "双矩阵运算": "输入矩阵 A、B 后选择运算。加减和对应元素运算要求形状相同；矩阵乘法要求 A 的列数等于 B 的行数。可先载入示例。",
+    "单矩阵运算": "输入矩阵 A 后选择分析。行列式、逆矩阵和特征分解要求方阵；SVD 与转置支持长方阵。可先载入示例。",
+    "解线性方程组": "输入系数矩阵 A 和列向量 b，求解 Ax=b。A 的列数必须等于 b 的行数；调整 b 时只需增减行。可载入唯一解、无穷多解或无解示例。",
+    "二次型分析": "输入方阵 A 分析 f=xᵀAx；非对称矩阵会先取对称部分 (A+Aᵀ)/2。可载入示例查看不同定性。",
+    "微积分": "输入支持的 f(x) 表达式并设置区间。切线斜率和积分均为数值近似；可载入示例开始。",
+}
+
 EXAMPLES: dict[str, list[dict]] = {
     "双矩阵运算": [
         {
@@ -304,6 +312,11 @@ class MainWindow(QWidget):
         self.example_layout.setSpacing(6)
         content.addWidget(self.example_row)
 
+        self.guidance_label = QLabel("")
+        self.guidance_label.setObjectName("Caption")
+        self.guidance_label.setWordWrap(True)
+        content.addWidget(self.guidance_label)
+
         self.calc_panel = self._build_calc_panel()
         self.calc_panel.setHidden(True)
         content.addWidget(self.calc_panel)
@@ -369,6 +382,11 @@ class MainWindow(QWidget):
         self.result_label.setWordWrap(True)
         self.result_label.setAlignment(Qt.AlignTop | Qt.AlignLeft)
         self.result_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
+
+        self.confidence_label = QLabel("")
+        self.confidence_label.setObjectName("Caption")
+        self.confidence_label.setWordWrap(True)
+        self.confidence_label.setHidden(True)
 
         self.metrics_label = QLabel("")
         self.metrics_label.setObjectName("Caption")
@@ -441,6 +459,7 @@ class MainWindow(QWidget):
 
         card.addWidget(self.result_title)
         card.addWidget(self.result_label)
+        card.addWidget(self.confidence_label)
         card.addWidget(self.metrics_label)
         analysis_wrap = QHBoxLayout()
         analysis_wrap.setContentsMargins(0, 0, 0, 0)
@@ -473,6 +492,7 @@ class MainWindow(QWidget):
         self.page_title.setText(page)
         self._rebuild_op_buttons()
         self._rebuild_example_buttons()
+        self.guidance_label.setText(PAGE_GUIDANCE[page])
         self._apply_op_layout()
         self._clear_output()
 
@@ -586,8 +606,11 @@ class MainWindow(QWidget):
         self.error_label.setText("")
         self.result_title.setText("计算结果")
         self.result_label.setText("请在上方选择运算并点击“计算”。")
+        self.confidence_label.setHidden(True)
+        self.confidence_label.setText("")
         self.metrics_label.setHidden(True)
         self.metrics_label.setText("")
+        self.details_label.setText("")
         self.plot_section.setHidden(True)
         self._pending_plot = None
         self.analysis_row.setHidden(True)
@@ -604,8 +627,25 @@ class MainWindow(QWidget):
         self.to_b_button.setEnabled(False)
 
     def _show_error(self, message: str) -> None:
+        message = self._translate_error(message)
         self.error_label.setText(message)
         self.error_label.setHidden(False)
+
+    @staticmethod
+    def _translate_error(message: str) -> str:
+        """将常见数学边界错误补充为可执行的修正建议。"""
+        lowered = message.lower()
+        if "square" in lowered or "方阵" in message:
+            return f"{message}。请检查 A 的行数和列数是否相同。"
+        if "singular" in lowered or "奇异" in message or "not invertible" in lowered:
+            return f"{message}。该矩阵没有可用的逆矩阵；可检查行列式或改用适合当前问题的方法。"
+        if "dimension" in lowered or "形状" in message or "shape" in lowered:
+            return f"{message}。请检查参与运算的矩阵行列数是否满足该运算要求。"
+        if "finite" in lowered or "nan" in lowered or "infinity" in lowered:
+            return f"{message}。请将对应单元格改为有限实数。"
+        if "domain" in lowered or "定义域" in message or "invalid value" in lowered:
+            return f"{message}。请检查表达式定义域及所选计算区间。"
+        return message
 
     # ---------------- 计算 ----------------
 
@@ -719,6 +759,10 @@ class MainWindow(QWidget):
     ) -> None:
         self.result_title.setText(title)
         self.result_label.setText(text)
+        self.confidence_label.setText(
+            "数值结果：基于双精度浮点计算，显示约 4 位有效数字；绝对值小于 1e-9 的数会显示为 0。秩、可逆性和特征值分类受浮点舍入及算法容差影响。"
+        )
+        self.confidence_label.setHidden(False)
         self._export_items = items
         self._primary_matrix = items[0][1] if items else None
         self.export_button.setEnabled(True)
@@ -784,13 +828,13 @@ class MainWindow(QWidget):
             self.input_b.set_matrix(self._primary_matrix)
 
     def _on_copy(self) -> None:
-        QGuiApplication.clipboard().setText(self.result_label.text())
+        QGuiApplication.clipboard().setText(self._result_export_text())
 
     def _on_export(self) -> None:
         menu = QMenu(self)
         menu.addAction(
             "TXT（完整结果）",
-            lambda: self._save_export_text(self.result_label.text(), "txt", "结果"),
+            lambda: self._save_export_text(self._result_export_text(), "txt", "结果"),
         )
         for label, matrix in self._export_items:
             menu.addAction(
@@ -806,6 +850,17 @@ class MainWindow(QWidget):
                 ),
             )
         menu.exec(self.export_button.mapToGlobal(self.export_button.rect().bottomLeft()))
+
+    def _result_export_text(self) -> str:
+        """复制与 TXT 导出共用完整结果、数值说明和运算解释。"""
+        sections = [self.result_label.text()]
+        if self.metrics_label.text() and not self.metrics_label.isHidden():
+            sections.append(self.metrics_label.text())
+        if self.confidence_label.text() and not self.confidence_label.isHidden():
+            sections.append(self.confidence_label.text())
+        if self.details_label.text():
+            sections.append("说明：\n" + self.details_label.text())
+        return "\n\n".join(sections)
 
     def _save_export_text(self, text: str, ext: str, label: str) -> None:
         safe_label = re.sub(r"[^\w\u4e00-\u9fff]+", "-", label).strip("-") or "matrix"
@@ -831,11 +886,17 @@ class MainWindow(QWidget):
             return format_scalar(result), spec.description, [("行列式", value)]
         if name == "特征分解":
             values, vectors = result
+            complex_note = (
+                "\n\n结果含复数；a+bj 中 j 表示虚数单位。"
+                if np.iscomplexobj(values) or np.iscomplexobj(vectors)
+                else ""
+            )
             text = (
                 "特征值（每行一个）：\n"
                 + format_matrix(np.asarray(values).reshape(-1, 1))
                 + "\n\n特征向量（每列一个）：\n"
                 + format_matrix(vectors)
+                + complex_note
             )
             items = [
                 ("特征值", np.asarray(values).reshape(-1, 1)),
@@ -880,6 +941,7 @@ class MainWindow(QWidget):
             + format_matrix(result["Q"])
             + f"\n\n经正交变换 x = Qy，标准形为：f = {standard_form}"
             + f"\n\n判定结果：{result['kind']}"
+            + "\n\n数值判定规则：|特征值| ≤ 1e-9 按 0 处理。"
         )
         details = (
             f"正惯性指数 p = {result['pos']}\n"
@@ -900,7 +962,10 @@ class MainWindow(QWidget):
         details = (
             f"r(A) = {info['rA']}\n"
             f"r([A|b]) = {info['rAb']}\n"
-            f"未知数个数 n = {info['n']}"
+            f"A 的 SVD 秩阈值 = {info['rank_tol']:.3g}\n"
+            f"未知数个数 n = {info['n']}\n"
+            f"A 的二范数条件数 κ₂(A) = {np.linalg.cond(info['aug'][:, :-1]):.4g}"
+            "（条件数较大时，输入微小变化可能明显影响解。）"
         )
         if status == "unique":
             x = info["x"].reshape(-1, 1)
@@ -917,8 +982,10 @@ class MainWindow(QWidget):
             )
             return text, details, [("特解xp", xp), ("基础解系", info["null"])]
         x_ls = info["x_ls"].reshape(-1, 1)
+        residual = np.linalg.norm(info["aug"][:, :-1] @ x_ls.ravel() - info["aug"][:, -1])
+        details += f"\n最小二乘残差范数 ‖Ax−b‖₂ = {residual:.4g}"
         return (
-            "方程组无解（矛盾方程组）。最小二乘近似解：\n" + format_matrix(x_ls),
+            "方程组无精确解（按浮点秩判定）。以下是使 ‖Ax−b‖₂ 最小的近似解：\n" + format_matrix(x_ls),
             details,
             [("最小二乘近似解", x_ls)],
         )

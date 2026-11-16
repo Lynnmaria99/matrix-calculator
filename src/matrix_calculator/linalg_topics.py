@@ -31,10 +31,10 @@ def solve_linear(a: np.ndarray, b: np.ndarray):
     - ``none``：无解，包含最小二乘近似解。
     """
     m, n = a.shape
-    r_a, null, _ = rank_and_nullspace(a)
+    r_a, null, rank_tol = rank_and_nullspace(a)
     aug = np.hstack([a, b.reshape(-1, 1)])
     r_ab = int(np.linalg.matrix_rank(aug))
-    info = {"rA": r_a, "rAb": r_ab, "n": n, "aug": aug}
+    info = {"rA": r_a, "rAb": r_ab, "n": n, "aug": aug, "rank_tol": rank_tol}
 
     if r_a < r_ab:
         x_ls, *_ = np.linalg.lstsq(a, b, rcond=None)

@@ -330,13 +330,6 @@ class TestSquareMatrixRequirement:
 class TestUILayerVisibility:
     """Test UI layer visibility filtering."""
 
-    def test_get_operations_by_ui_layer_web(self):
-        """get_operations_by_ui_layer('web') should return web-visible operations."""
-        web_ops = get_operations_by_ui_layer("web")
-        assert len(web_ops) > 0
-        for op in web_ops:
-            assert "web" in op.get("visible_in", ["web", "desktop", "cli"])
-
     def test_get_operations_by_ui_layer_desktop(self):
         """get_operations_by_ui_layer('desktop') should return desktop-visible operations."""
         desktop_ops = get_operations_by_ui_layer("desktop")
@@ -347,11 +340,10 @@ class TestUILayerVisibility:
         cli_ops = get_operations_by_ui_layer("cli")
         assert len(cli_ops) > 0
 
-    def test_all_operations_visible_in_all_layers(self):
-        """All current operations should be visible in web, desktop, and cli."""
+    def test_all_operations_visible_in_remaining_layers(self):
+        """All current operations should be visible in desktop and cli."""
         for op in OPERATIONS.values():
-            visible_in = op.get("visible_in", ["web", "desktop", "cli"])
-            assert "web" in visible_in
+            visible_in = op.get("visible_in", ["desktop", "cli"])
             assert "desktop" in visible_in
             assert "cli" in visible_in
 
@@ -438,7 +430,7 @@ class TestIntegration:
 
     def test_registry_completeness(self):
         """Registry should support all UI layers without missing operations."""
-        for layer in ["web", "desktop", "cli"]:
+        for layer in ["desktop", "cli"]:
             layer_ops = get_operations_by_ui_layer(layer)
             # Each layer should have same number of operations
             assert len(layer_ops) == len(OPERATIONS)
