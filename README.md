@@ -2,7 +2,7 @@
 
 **English** · [简体中文](#简体中文)
 
-A Python learning tool for introductory linear algebra and numerical calculus. It includes a PySide6 desktop application, a command-line interface, and a NumPy-powered computation library for scripts and Jupyter notebooks.
+An offline-first Python learning tool for introductory linear algebra and numerical calculus. Its PySide6 desktop app focuses on clear input guidance, inspectable numerical results, and visual learning. A command-line interface and reusable NumPy computation library are also included.
 
 ## Features
 
@@ -58,6 +58,8 @@ Download `MatrixCalculator-Windows-x64.zip` from [Releases](https://github.com/L
 
 See the [Windows packaging guide](packaging/WINDOWS.md) for local builds and release details.
 
+See [Release Notes](CHANGELOG.md) for updates in version 1.3.0.
+
 ## Jupyter notebook and visualizations
 
 The [linear algebra demo notebook](examples/linear_algebra_demo.ipynb) shows core operations, linear-system classification, 2D linear transformations, and SVD singular-value plots.
@@ -110,7 +112,7 @@ Calculus results are numerical approximations, not symbolic derivatives or exact
 
 [回到 English](#matrix-calculator)
 
-这是一个面向线性代数与数值微积分入门的 Python 学习工具，提供 PySide6 桌面应用、命令行界面，以及可供脚本和 Jupyter Notebook 复用的 NumPy 计算库。
+这是一个离线优先的线性代数与数值微积分入门学习工具。PySide6 桌面应用强调清楚的输入引导、可检查的数值结果和直观图示，同时提供命令行界面及可供脚本、Jupyter Notebook 复用的 NumPy 计算库。
 
 ### 功能
 
@@ -138,6 +140,8 @@ matrix-calculator
 ```
 
 下载 Windows 独立版后，解压完整的 `MatrixCalculator` 文件夹并运行 `MatrixCalculator.exe`，无需安装 Python。请保留文件夹内的全部文件。
+
+版本更新见[发布说明](CHANGELOG.md)。
 
 ### Notebook 演示
 
