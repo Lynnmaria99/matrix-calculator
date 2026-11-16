@@ -269,11 +269,16 @@ class MatrixTableWidget(QWidget):
                         f"{self._label} 第 {i + 1} 行第 {j + 1} 列为空，请填写数字"
                     )
                 try:
-                    row.append(float(text))
+                    value = float(text)
                 except ValueError as exc:
                     raise MatrixOperationError(
                         f"{self._label} 第 {i + 1} 行第 {j + 1} 列 “{text}” 不是数字"
                     ) from exc
+                if not np.isfinite(value):
+                    raise MatrixOperationError(
+                        f"{self._label} 第 {i + 1} 行第 {j + 1} 列必须是有限数字（不能为 NaN 或无穷大）"
+                    )
+                row.append(value)
             values.append(row)
         return np.array(values, dtype=float)
 

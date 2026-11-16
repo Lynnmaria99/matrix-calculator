@@ -2,7 +2,7 @@
 
 This module provides a single source of truth for all matrix operations available
 in the calculator. Each operation is defined once with its metadata (name, category,
-UI label, computation function, help text), enabling web, desktop, and CLI to share
+UI label, computation function, help text), enabling desktop and CLI to share
 consistent operation definitions without duplication.
 
 Operations are organized by category:
@@ -52,7 +52,7 @@ OPERATIONS: dict[str, dict[str, Any]] = {
         "function": operations.add_matrices,
         "help_text": "Element-wise addition of two matrices with identical dimensions.",
         "requires_square_matrix": False,
-        "visible_in": ["web", "desktop", "cli"],
+        "visible_in": ["desktop", "cli"],
     },
     "subtract": {
         "code": "subtract",
@@ -61,7 +61,7 @@ OPERATIONS: dict[str, dict[str, Any]] = {
         "function": operations.subtract_matrices,
         "help_text": "Element-wise subtraction of two matrices with identical dimensions.",
         "requires_square_matrix": False,
-        "visible_in": ["web", "desktop", "cli"],
+        "visible_in": ["desktop", "cli"],
     },
     "multiply": {
         "code": "multiply",
@@ -70,7 +70,7 @@ OPERATIONS: dict[str, dict[str, Any]] = {
         "function": operations.matrix_multiply,
         "help_text": "Matrix multiplication: columns of A must equal rows of B.",
         "requires_square_matrix": False,
-        "visible_in": ["web", "desktop", "cli"],
+        "visible_in": ["desktop", "cli"],
     },
     "hadamard_multiply": {
         "code": "hadamard_multiply",
@@ -79,7 +79,7 @@ OPERATIONS: dict[str, dict[str, Any]] = {
         "function": operations.hadamard_multiply,
         "help_text": "Element-wise (Hadamard) multiplication of two matrices with identical dimensions.",
         "requires_square_matrix": False,
-        "visible_in": ["web", "desktop", "cli"],
+        "visible_in": ["desktop", "cli"],
     },
     "hadamard_divide": {
         "code": "hadamard_divide",
@@ -88,7 +88,7 @@ OPERATIONS: dict[str, dict[str, Any]] = {
         "function": operations.hadamard_divide,
         "help_text": "Element-wise division of two matrices; divisor matrix must not contain zeros.",
         "requires_square_matrix": False,
-        "visible_in": ["web", "desktop", "cli"],
+        "visible_in": ["desktop", "cli"],
     },
     # Unary Operations
     "determinant": {
@@ -98,7 +98,7 @@ OPERATIONS: dict[str, dict[str, Any]] = {
         "function": operations.determinant,
         "help_text": "Determinant of a square matrix; measures invertibility and scaling factor.",
         "requires_square_matrix": True,
-        "visible_in": ["web", "desktop", "cli"],
+        "visible_in": ["desktop", "cli"],
     },
     "inverse": {
         "code": "inverse",
@@ -107,7 +107,7 @@ OPERATIONS: dict[str, dict[str, Any]] = {
         "function": operations.invert_matrix,
         "help_text": "Inverse of a square non-singular matrix; raises error if matrix is singular.",
         "requires_square_matrix": True,
-        "visible_in": ["web", "desktop", "cli"],
+        "visible_in": ["desktop", "cli"],
     },
     "transpose": {
         "code": "transpose",
@@ -116,7 +116,7 @@ OPERATIONS: dict[str, dict[str, Any]] = {
         "function": operations.transpose,
         "help_text": "Transpose of a matrix: rows become columns and columns become rows.",
         "requires_square_matrix": False,
-        "visible_in": ["web", "desktop", "cli"],
+        "visible_in": ["desktop", "cli"],
     },
     "eigendecompose": {
         "code": "eigendecompose",
@@ -125,7 +125,7 @@ OPERATIONS: dict[str, dict[str, Any]] = {
         "function": operations.eigendecompose,
         "help_text": "Eigendecomposition of a square matrix; returns eigenvalues and eigenvectors.",
         "requires_square_matrix": True,
-        "visible_in": ["web", "desktop", "cli"],
+        "visible_in": ["desktop", "cli"],
     },
     "singular_value_decompose": {
         "code": "singular_value_decompose",
@@ -134,7 +134,7 @@ OPERATIONS: dict[str, dict[str, Any]] = {
         "function": operations.singular_value_decompose,
         "help_text": "Singular Value Decomposition; decomposes any matrix into orthogonal and diagonal components.",
         "requires_square_matrix": False,
-        "visible_in": ["web", "desktop", "cli"],
+        "visible_in": ["desktop", "cli"],
     },
     # Solve Category
     "solve_linear": {
@@ -144,7 +144,7 @@ OPERATIONS: dict[str, dict[str, Any]] = {
         "function": linalg_topics.solve_linear,
         "help_text": "Solve the linear system Ax=b; detects unique, infinite, or no solutions.",
         "requires_square_matrix": False,
-        "visible_in": ["web", "desktop", "cli"],
+        "visible_in": ["desktop", "cli"],
     },
     # Quadratic Category
     "analyze_quadratic": {
@@ -154,7 +154,7 @@ OPERATIONS: dict[str, dict[str, Any]] = {
         "function": linalg_topics.analyze_quadratic,
         "help_text": "Analyze quadratic form xᵀAx: eigenvalues, standard form, and definiteness classification.",
         "requires_square_matrix": True,
-        "visible_in": ["web", "desktop", "cli"],
+        "visible_in": ["desktop", "cli"],
     },
 }
 
@@ -276,12 +276,12 @@ def get_operations_by_ui_layer(layer: str) -> list[dict[str, Any]]:
     """Retrieve operations visible in a specific UI layer.
     
     Args:
-        layer: UI layer name ("web", "desktop", or "cli")
+        layer: UI layer name ("desktop" or "cli")
         
     Returns:
         List of operation metadata dicts visible in the specified layer
     """
     return [
         op for op in OPERATIONS.values()
-        if layer in op.get("visible_in", ["web", "desktop", "cli"])
+        if layer in op.get("visible_in", ["desktop", "cli"])
     ]

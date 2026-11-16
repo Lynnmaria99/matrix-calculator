@@ -1,7 +1,7 @@
 """Result formatting and export functions for matrices.
 
 This module consolidates matrix formatting and export logic that was previously
-duplicated across web (Streamlit) and desktop (PySide6) layers. It provides
+shared by desktop (PySide6) and CLI layers. It provides
 framework-agnostic functions for converting numpy arrays to human-readable or
 exportable formats.
 
