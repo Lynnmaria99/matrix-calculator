@@ -50,8 +50,8 @@ powershell -ExecutionPolicy Bypass -File .\packaging\windows\build.ps1
 首次发布前，先合并打包配置，再在最新 `master` 上创建与 `pyproject.toml`、`packaging/windows/version_info.txt` 一致的版本标签，例如：
 
 ```powershell
-git tag v1.2.0
-git push origin v1.2.0
+git tag v1.3.0
+git push origin v1.3.0
 ```
 
 发布流程仅上传 Windows x64 ZIP，不会把 `dist/`、`build/` 或 exe 提交进源码仓库。
