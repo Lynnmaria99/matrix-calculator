@@ -4,6 +4,8 @@
 
 An offline-first Python learning tool for introductory linear algebra and numerical calculus. Its PySide6 desktop app focuses on clear input guidance, inspectable numerical results, and visual learning. A command-line interface and reusable NumPy computation library are also included.
 
+**AI development note:** This project was developed with OpenAI Codex using the ChatGPT 6 model.
+
 ## Features
 
 - Matrix addition, subtraction, multiplication, and element-wise operations
@@ -113,6 +115,8 @@ Calculus results are numerical approximations, not symbolic derivatives or exact
 [回到 English](#matrix-calculator)
 
 这是一个离线优先的线性代数与数值微积分入门学习工具。PySide6 桌面应用强调清楚的输入引导、可检查的数值结果和直观图示，同时提供命令行界面及可供脚本、Jupyter Notebook 复用的 NumPy 计算库。
+
+**AI 开发说明：**本项目由 OpenAI Codex 辅助开发，使用 ChatGPT 6 模型生成。
 
 ### 功能
 
